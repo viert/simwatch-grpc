@@ -1,0 +1,193 @@
+syntax = "proto3";
+
+package camden;
+
+message Point {
+  double lat = 1;
+  double lng = 2;
+}
+
+enum Facility {
+  REJECT = 0;
+  ATIS = 1;
+  DELIVERY = 2;
+  GROUND = 3;
+  TOWER = 4;
+  APPROACH = 5;
+  RADAR = 6;
+}
+
+message Controller {
+  uint32 cid = 1;
+  string name = 2;
+  string callsign = 3;
+  uint32 freq = 4;
+  Facility facility = 5;
+  int32 rating = 6;
+  string server = 7;
+  uint32 visual_range = 8;
+  string atis_code = 9;
+  string text_atis = 10;
+  optional string human_readable = 11;
+  uint64 last_updated = 12;
+  uint64 logon_time = 13;
+}
+
+message ControllerSet {
+  Controller atis = 1;
+  Controller delivery = 2;
+  Controller ground = 3;
+  Controller tower = 4;
+  Controller approach = 5;
+}
+
+message Pilot {
+  uint32 cid = 1;
+  string name = 2;
+  string callsign = 3;
+  string server = 4;
+  int32 pilot_rating = 5;
+  Point position = 6;
+  int32 altitude = 7;
+  int32 groundspeed = 8;
+  string transponder  = 9;
+  int32 heading = 10;
+  uint32 qnh_i_hg = 11;
+  uint32 qnh_mb = 12;
+  FlightPlan flight_plan = 13;
+  uint64 last_updated = 14;
+  uint64 logon_time = 15;
+}
+
+message FlightPlan {
+  string flight_rules = 1;
+  string aircraft = 2;
+  string departure = 3;
+  string arrival = 4;
+  string alternate = 5;
+  uint32 cruise_tas = 6;
+  uint32 altitude = 7;
+  string deptime = 8;
+  string enroute_time = 9;
+  string fuel_time = 10;
+  string remarks = 11;
+  string route = 12;
+}
+
+message Runway {
+  string icao = 1;
+  uint32 length_ft = 2;
+  uint32 width_ft = 3;
+  string surface = 4;
+  bool lighted = 5;
+  bool closed = 6;
+  string ident = 7;
+  double latitude = 8;
+  double longitude = 9;
+  int32 elevation_ft = 10;
+  int32 heading = 11;
+  bool active_to = 12;
+  bool active_lnd = 13;
+}
+
+message WeatherInfo {
+  optional double temperature = 1;
+  optional double dew_point = 2;
+  optional uint64 wind_speed = 3;
+  optional uint64 wind_gust = 4;
+  oneof wind_direction {
+    string wind_direction_variable = 5;
+    uint32 wind_direction_deg = 6;
+  }
+  string raw = 7;
+  uint64 ts = 8;
+}
+
+message Airport {
+  string icao = 1;
+  string iata = 2;
+  string name = 3;
+  Point position = 4;
+  string fir_id = 5;
+  bool is_pseudo = 6;
+  map<string, Runway> runways = 7;
+  WeatherInfo wx = 8;
+  ControllerSet controllers = 9;
+}
+
+message FIR {
+  string icao = 1;
+  string name = 2;
+  string prefix = 3;
+  map<string, Controller> controllers = 4;
+}
+
+enum UpdateType {
+  SET = 0;
+  DELETE = 1;
+}
+
+message Update {
+  UpdateType update_type = 1;
+  oneof object {
+    Airport airport = 2;
+    FIR fir = 3;
+    Pilot pilot = 4;
+  }
+}
+
+message MapBounds {
+  Point sw = 1;
+  Point ne = 2;
+  double zoom = 3;
+}
+
+message MapUpdatesRequest {
+  oneof request {
+    MapBounds bounds = 1;
+    string filter = 2;
+    bool show_wx = 3;
+  }
+}
+
+message AirportRequest {
+  string code = 1;
+}
+
+message AirportResponse {
+  Airport airport = 1;
+}
+
+message PilotRequest {
+  string callsign = 1;
+}
+
+message PilotResponse {
+  Pilot pilot = 1;
+}
+
+message QueryRequest {
+  string query = 1;
+}
+
+message QueryResponse {
+  bool valid = 1;
+  optional string error_message = 2;
+}
+
+message BuildInfoResponse {
+  string name = 1;
+  string version = 2;
+  string repository = 3;
+  string  license = 4;
+}
+
+message NoParams {}
+
+service Camden {
+  rpc MapUpdates(stream MapUpdatesRequest) returns (stream Update);
+  rpc GetAirport(AirportRequest) returns (AirportResponse);
+  rpc GetPilot(PilotRequest) returns (PilotResponse);
+  rpc CheckQuery(QueryRequest) returns (QueryResponse);
+  rpc BuildInfo(NoParams) returns (BuildInfoResponse);
+}
