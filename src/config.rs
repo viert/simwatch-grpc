@@ -66,13 +66,15 @@ impl Default for Log {
 }
 
 #[derive(Deserialize, Debug, Clone)]
-pub struct Web {
-  pub port: u16,
+pub struct GrpcCfg {
+  pub listen: String,
 }
 
-impl Default for Web {
+impl Default for GrpcCfg {
   fn default() -> Self {
-    Self { port: 8000 }
+    Self {
+      listen: "localhost:12000".into(),
+    }
   }
 }
 
@@ -117,7 +119,7 @@ impl Default for Track {
 #[derive(Deserialize, Debug, Clone, Default)]
 pub struct Config {
   pub log: Log,
-  pub web: Web,
+  pub grpc: GrpcCfg,
   pub api: Api,
   pub fixed: Fixed,
   pub track: Track,

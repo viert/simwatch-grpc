@@ -15,6 +15,7 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
   // TODO cmdline flag -c
   let config = read_config(None);
+  let addr = config.grpc.listen.parse().unwrap();
 
   TermLogger::init(
     config.log.level,
@@ -38,7 +39,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
   }
 
-  let addr = "127.0.0.1:10000".parse().unwrap();
   let svc = CamdenService::new(m);
   let svc = CamdenServer::new(svc);
   Server::builder().add_service(svc).serve(addr).await?;

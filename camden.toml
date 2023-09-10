@@ -4,8 +4,8 @@ map_win_multiplier = 1.3
 [log]
 level = "debug"
 
-[web]
-port = 8000
+[grpc]
+listen = "127.0.0.1:12000"
 
 [api]
 url = "https://data.vatsim.net/v3/vatsim-data.json"
