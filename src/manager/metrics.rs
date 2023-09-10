@@ -1,4 +1,4 @@
-use crate::util::seconds_since;
+use crate::{service::camden, util::seconds_since};
 use chrono::{DateTime, Utc};
 use std::{collections::HashMap, fmt::Display};
 
@@ -13,12 +13,23 @@ macro_rules! labels {
   };
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum MetricType {
   Counter,
   Gauge,
   Summary,
   Histogram,
+}
+
+impl From<MetricType> for camden::MetricType {
+  fn from(value: MetricType) -> Self {
+    match value {
+      MetricType::Counter => camden::MetricType::Counter,
+      MetricType::Gauge => camden::MetricType::Gauge,
+      MetricType::Summary => camden::MetricType::Summary,
+      MetricType::Histogram => camden::MetricType::Histogram,
+    }
+  }
 }
 
 impl Display for MetricType {
@@ -32,7 +43,7 @@ impl Display for MetricType {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Metric<T: Display + Clone + Default> {
   name: String,
   help: String,
@@ -98,7 +109,71 @@ impl<T: Display + Clone + Default> Metric<T> {
   }
 }
 
-#[derive(Debug)]
+impl From<Metric<u64>> for camden::Metric {
+  fn from(value: Metric<u64>) -> Self {
+    Self {
+      name: value.name,
+      help: value.help,
+      metric_type: value.metric_type as i32,
+      single: value.single,
+      is_float: false,
+      float_values: Default::default(),
+      int_values: value.values,
+    }
+  }
+}
+
+impl From<Metric<usize>> for camden::Metric {
+  fn from(value: Metric<usize>) -> Self {
+    Self {
+      name: value.name,
+      help: value.help,
+      metric_type: value.metric_type as i32,
+      single: value.single,
+      is_float: false,
+      float_values: Default::default(),
+      int_values: value
+        .values
+        .into_iter()
+        .map(|(k, v)| (k, v as u64))
+        .collect(),
+    }
+  }
+}
+
+impl From<Metric<f64>> for camden::Metric {
+  fn from(value: Metric<f64>) -> Self {
+    Self {
+      name: value.name,
+      help: value.help,
+      metric_type: value.metric_type as i32,
+      single: value.single,
+      is_float: true,
+      float_values: value.values,
+      int_values: Default::default(),
+    }
+  }
+}
+
+impl From<Metric<f32>> for camden::Metric {
+  fn from(value: Metric<f32>) -> Self {
+    Self {
+      name: value.name,
+      help: value.help,
+      metric_type: value.metric_type as i32,
+      single: value.single,
+      is_float: true,
+      float_values: value
+        .values
+        .into_iter()
+        .map(|(k, v)| (k, v as f64))
+        .collect(),
+      int_values: Default::default(),
+    }
+  }
+}
+
+#[derive(Debug, Clone)]
 pub struct Metrics {
   pub vatsim_objects_online: Metric<usize>,
   pub database_objects_count: Metric<u64>,
@@ -180,5 +255,22 @@ impl Metrics {
 impl Default for Metrics {
   fn default() -> Self {
     Self::new()
+  }
+}
+
+impl From<Metrics> for camden::MetricSet {
+  fn from(value: Metrics) -> Self {
+    Self {
+      vatsim_objects_online: Some(value.vatsim_objects_online.into()),
+      database_objects_count: Some(value.database_objects_count.into()),
+      database_objects_count_fetch_time_sec: Some(
+        value.database_objects_count_fetch_time_sec.into(),
+      ),
+      vatsim_data_load_time_sec: Some(value.vatsim_data_load_time_sec.into()),
+      processing_time_sec: Some(value.processing_time_sec.into()),
+      db_cleanup_time_sec: Some(value.db_cleanup_time_sec.into()),
+      vatsim_data_timestamp: value.vatsim_data_timestamp as u64,
+      process_started_at: value.process_started_at.timestamp_millis() as u64,
+    }
   }
 }

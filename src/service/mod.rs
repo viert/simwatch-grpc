@@ -6,8 +6,8 @@ mod filter;
 
 use self::camden::map_updates_request::Request as ServiceRequest;
 use self::camden::{
-  AirportRequest, AirportResponse, BuildInfoResponse, NoParams, PilotRequest, PilotResponse,
-  QueryRequest, QueryResponse,
+  AirportRequest, AirportResponse, BuildInfoResponse, MetricSet, MetricSetTextResponse, NoParams,
+  PilotRequest, PilotResponse, QueryRequest, QueryResponse,
 };
 use crate::lee::make_expr;
 use crate::lee::parser::expression::CompileFunc;
@@ -300,5 +300,18 @@ impl Camden for CamdenService {
       repository,
       license: license_file,
     }))
+  }
+
+  async fn get_metrics(&self, _: Request<NoParams>) -> Result<Response<MetricSet>, Status> {
+    let metrics = self.manager.get_metrics_clone().await;
+    Ok(Response::new(metrics.into()))
+  }
+
+  async fn get_metrics_text(
+    &self,
+    _: Request<NoParams>,
+  ) -> Result<Response<MetricSetTextResponse>, Status> {
+    let text = self.manager.render_metrics().await;
+    Ok(Response::new(MetricSetTextResponse { text }))
   }
 }

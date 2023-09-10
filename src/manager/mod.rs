@@ -475,4 +475,8 @@ impl Manager {
       Ok(None)
     }
   }
+
+  pub async fn get_metrics_clone(&self) -> Metrics {
+    self.metrics.read().await.clone()
+  }
 }

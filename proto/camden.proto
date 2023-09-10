@@ -184,10 +184,44 @@ message BuildInfoResponse {
 
 message NoParams {}
 
+enum MetricType {
+  COUNTER = 0;
+  GAUGE = 1;
+  SUMMARY = 2;
+  HISTOGRAM = 3;
+}
+
+message Metric {
+  string name = 1;
+  string help = 2;
+  MetricType metric_type = 3;
+  bool single = 4;
+  bool is_float = 5;
+  map<string, double> float_values = 6;
+  map<string, uint64> int_values = 7;
+}
+
+message MetricSet {
+  Metric vatsim_objects_online = 1;
+  Metric database_objects_count = 2;
+  Metric database_objects_count_fetch_time_sec = 3;
+  Metric vatsim_data_load_time_sec = 4;
+  Metric processing_time_sec = 5;
+  Metric db_cleanup_time_sec = 6;
+  uint64 vatsim_data_timestamp = 7;
+  uint64 process_started_at = 8;
+}
+
+message MetricSetTextResponse {
+  string text = 1;
+}
+
 service Camden {
   rpc MapUpdates(stream MapUpdatesRequest) returns (stream Update);
   rpc GetAirport(AirportRequest) returns (AirportResponse);
   rpc GetPilot(PilotRequest) returns (PilotResponse);
   rpc CheckQuery(QueryRequest) returns (QueryResponse);
   rpc BuildInfo(NoParams) returns (BuildInfoResponse);
+  rpc GetMetrics(NoParams) returns (MetricSet);
+  rpc GetMetricsText(NoParams) returns (MetricSetTextResponse);
 }
