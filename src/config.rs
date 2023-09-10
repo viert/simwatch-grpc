@@ -127,33 +127,32 @@ pub struct Config {
   pub camden: Camden,
 }
 
-pub fn read_config(filename: Option<&str>) -> Config {
-  let mut filenames = vec!["./camden.toml", "/etc/camden.toml"];
-  if let Some(filename) = filename {
-    filenames.insert(0, filename);
-  }
+pub fn read_config(filename: &str) -> Config {
+  let mut filenames = vec!["./simwatch-grpc.toml"];
+  filenames.insert(0, filename);
 
   for fname in filenames {
     let path = Path::new(fname);
-    println!("Trying config file {}...", fname);
+    println!("Trying config file {fname}...");
     if path.is_file() {
       let res = File::open(path);
       if let Err(err) = res {
-        println!("Error opening config file {}: {}", fname, err);
+        println!("Error opening config file {fname}: {err}");
         continue;
       }
       let mut f = res.unwrap();
       let mut config_raw = String::new();
       let res = f.read_to_string(&mut config_raw);
       if let Err(err) = res {
-        println!("Error reading config file {}: {}", fname, err);
+        println!("Error reading config file {fname}: {err}");
         continue;
       }
       let res: Result<Config, toml::de::Error> = toml::from_str(&config_raw);
       if let Err(err) = res {
-        println!("Error parsing config file {}: {}", fname, err);
+        println!("Error parsing config file {fname}: {err}");
         continue;
       }
+      println!("Using config file {fname}");
       return res.unwrap();
     }
     println!("Config file {} does not exist", fname);

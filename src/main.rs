@@ -1,5 +1,4 @@
-use std::sync::Arc;
-
+use clap::Parser;
 use grpcamden::{
   config::read_config,
   manager::Manager,
@@ -7,14 +6,21 @@ use grpcamden::{
 };
 use log::{error, info};
 use simplelog::{ColorChoice, Config, TermLogger, TerminalMode};
+use std::sync::Arc;
 use tonic::transport::Server;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
+#[derive(Parser, Debug)]
+struct Args {
+  #[arg(short, default_value = "/etc/simwatch/simwatch-grpc.toml")]
+  config: String,
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-  // TODO cmdline flag -c
-  let config = read_config(None);
+  let args = Args::parse();
+  let config = read_config(&args.config);
   let addr = config.grpc.listen.parse().unwrap();
 
   TermLogger::init(
