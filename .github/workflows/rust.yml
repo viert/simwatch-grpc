@@ -17,8 +17,9 @@ jobs:
         run: rustc --version
       - name: Install build dependencies
         run: |
-          /usr/bin/apt update && sudo /usr/bin/apt install -y wget zip libssl-dev libcrypto++-dev
-          /bin/mkdir /protobuf/
+          sudo /usr/bin/apt update && sudo /usr/bin/apt install -y wget zip libssl-dev libcrypto++-dev
+          sudo /bin/mkdir /protobuf/
+          sudo chown $(whoami) /protobuf/
           cd /protobuf/
           wget https://github.com/protocolbuffers/protobuf/releases/download/v24.3/protoc-24.3-linux-x86_64.zip
           unzip protoc-24.3-linux-x86_64.zip
