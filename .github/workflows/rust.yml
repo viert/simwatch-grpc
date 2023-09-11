@@ -23,7 +23,7 @@ jobs:
           cd /protobuf/
           wget https://github.com/protocolbuffers/protobuf/releases/download/v24.3/protoc-24.3-linux-x86_64.zip
           unzip protoc-24.3-linux-x86_64.zip
-          mv /protobuf/bin/protoc /usr/sbin/
+          sudo mv /protobuf/bin/protoc /usr/sbin/
       - uses: actions/checkout@v3
       - uses: actions/cache@v3
         with:
