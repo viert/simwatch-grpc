@@ -1,4 +1,4 @@
-use chrono::{DateTime, TimeZone, Utc};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::service::camden;
@@ -10,9 +10,10 @@ where
   D: Deserializer<'de>,
 {
   let s = String::deserialize(deserializer)?;
-  Utc
-    .datetime_from_str(&s, WHY_IS_IT_EVEN_CUSTOM_FORMAT)
-    .map_err(serde::de::Error::custom)
+  let dt = DateTime::parse_from_str(&s, WHY_IS_IT_EVEN_CUSTOM_FORMAT)
+    .map_err(serde::de::Error::custom)?
+    .with_timezone(&Utc);
+  Ok(dt)
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
