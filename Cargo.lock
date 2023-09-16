@@ -913,40 +913,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6fb8d784f27acf97159b40fc4db5ecd8aa23b9ad5ef69cdd136d3bc80665f0c0"
 
 [[package]]
-name = "grpcamden"
-version = "0.1.0"
-dependencies = [
- "async-stream",
- "bson",
- "chrono",
- "clap",
- "csv",
- "duration-str",
- "geo",
- "geo-types",
- "geojson",
- "lazy_static",
- "log",
- "mongodb",
- "prost 0.11.9",
- "prost-types 0.12.0",
- "rand",
- "regex",
- "reqwest",
- "rstar 0.9.3",
- "serde",
- "serde_json",
- "simplelog",
- "tokio",
- "tokio-stream",
- "toml",
- "tonic",
- "tonic-build",
- "uuid",
- "zip",
-]
-
-[[package]]
 name = "h2"
 version = "0.3.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2238,6 +2204,40 @@ dependencies = [
  "log",
  "termcolor",
  "time",
+]
+
+[[package]]
+name = "simwatch-grpc"
+version = "0.1.1"
+dependencies = [
+ "async-stream",
+ "bson",
+ "chrono",
+ "clap",
+ "csv",
+ "duration-str",
+ "geo",
+ "geo-types",
+ "geojson",
+ "lazy_static",
+ "log",
+ "mongodb",
+ "prost 0.11.9",
+ "prost-types 0.12.0",
+ "rand",
+ "regex",
+ "reqwest",
+ "rstar 0.9.3",
+ "serde",
+ "serde_json",
+ "simplelog",
+ "tokio",
+ "tokio-stream",
+ "toml",
+ "tonic",
+ "tonic-build",
+ "uuid",
+ "zip",
 ]
 
 [[package]]

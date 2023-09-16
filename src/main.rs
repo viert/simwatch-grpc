@@ -1,11 +1,11 @@
 use clap::Parser;
-use grpcamden::{
+use log::{error, info};
+use simplelog::{ColorChoice, Config, TermLogger, TerminalMode};
+use simwatch_grpc::{
   config::read_config,
   manager::Manager,
   service::{camden::camden_server::CamdenServer, CamdenService},
 };
-use log::{error, info};
-use simplelog::{ColorChoice, Config, TermLogger, TerminalMode};
 use std::sync::Arc;
 use tonic::transport::Server;
 

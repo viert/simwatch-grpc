@@ -17,7 +17,7 @@ jobs:
         run: rustc --version
       - name: Install build dependencies
         run: |
-          sudo /usr/bin/apt update && sudo /usr/bin/apt install -y wget zip libssl-dev libcrypto++-dev
+          sudo /usr/bin/apt update && sudo /usr/bin/apt install -y wget zip libssl-dev libcrypto++-dev docker
           sudo /bin/mkdir /protobuf/
           sudo chown $(whoami) /protobuf/
           cd /protobuf/
@@ -37,3 +37,12 @@ jobs:
         run: cargo build --release
       - name: Run tests
         run: cargo test --release
+      - name: Docker build
+        env:
+          DOCKER_IMAGE: ${{ secrets.DOCKER_IMAGE }}
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        run: |
+          docker build -t $DOCKER_IMAGE .
+          docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+          docker push
