@@ -156,6 +156,7 @@ impl From<Pilot> for camden::Pilot {
       flight_plan: value.flight_plan.map(|fp| fp.into()),
       last_updated: value.last_updated.timestamp_millis() as u64,
       logon_time: value.logon_time.timestamp_millis() as u64,
+      track: vec![],
     }
   }
 }

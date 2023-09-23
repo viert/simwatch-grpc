@@ -244,9 +244,23 @@ impl Camden for CamdenService {
   ) -> Result<Response<PilotResponse>, Status> {
     let request = request.into_inner();
     let pilot = self.manager.get_pilot_by_callsign(&request.callsign).await;
-    Ok(Response::new(PilotResponse {
-      pilot: pilot.map(|v| v.into()),
-    }))
+    match pilot {
+      Some(pilot) => {
+        let tps = self
+          .manager
+          .get_pilot_track(&pilot)
+          .await
+          .map_err(|err| Status::unavailable(format!("{err}")))?;
+        let mut pilot: camden::Pilot = pilot.into();
+
+        if let Some(tps) = tps {
+          pilot.track = tps.into_iter().map(|tp| tp.into()).collect();
+        }
+
+        Ok(Response::new(PilotResponse { pilot: Some(pilot) }))
+      }
+      None => Err(Status::not_found("pilot not found")),
+    }
   }
 
   async fn get_airport(
@@ -255,9 +269,12 @@ impl Camden for CamdenService {
   ) -> Result<Response<AirportResponse>, Status> {
     let request = request.into_inner();
     let airport = self.manager.find_airport(&request.code).await;
-    Ok(Response::new(AirportResponse {
-      airport: airport.map(|v| v.into()),
-    }))
+    match airport {
+      Some(airport) => Ok(Response::new(AirportResponse {
+        airport: Some(airport.into()),
+      })),
+      None => Err(Status::not_found("airport not found")),
+    }
   }
 
   async fn check_query(

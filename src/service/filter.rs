@@ -66,6 +66,7 @@ pub fn compile_filter(cond: Condition) -> Result<Box<EvaluateFunc<Pilot>>, Compi
     "gs" => Box::new(move |pilot| value.eval_i64(pilot.groundspeed as i64, operator.clone())),
     "lat" => Box::new(move |pilot| value.eval_f64(pilot.position.lat, operator.clone())),
     "lng" => Box::new(move |pilot| value.eval_f64(pilot.position.lng, operator.clone())),
+    "cid" => Box::new(move |pilot| value.eval_i64(pilot.cid as i64, operator.clone())),
     "aircraft" => Box::new(move |pilot| {
       pilot
         .flight_plan

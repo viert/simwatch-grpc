@@ -1,4 +1,4 @@
-use crate::{config::Config, moving::pilot::Pilot};
+use crate::{config::Config, moving::pilot::Pilot, service::camden};
 use chrono::{Duration, Utc};
 use log::{error, info};
 use mongodb::{
@@ -45,6 +45,19 @@ pub struct TrackPoint {
 impl TrackPoint {
   pub fn collection() -> &'static str {
     "track_points"
+  }
+}
+
+impl From<TrackPoint> for camden::TrackPoint {
+  fn from(value: TrackPoint) -> Self {
+    Self {
+      lat: value.lat,
+      lng: value.lng,
+      alt: value.alt,
+      hdg: value.hdg as i32,
+      gs: value.gs,
+      ts: value.ts,
+    }
   }
 }
 

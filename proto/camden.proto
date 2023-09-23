@@ -57,6 +57,7 @@ message Pilot {
   FlightPlan flight_plan = 13;
   uint64 last_updated = 14;
   uint64 logon_time = 15;
+  repeated TrackPoint track = 16;
 }
 
 message FlightPlan {
@@ -72,6 +73,15 @@ message FlightPlan {
   string fuel_time = 10;
   string remarks = 11;
   string route = 12;
+}
+
+message TrackPoint {
+  double lat = 1;
+  double lng = 2;
+  int32 alt = 3;
+  int32 hdg = 4;
+  int32 gs = 5;
+  int64 ts = 6;
 }
 
 message Runway {
@@ -179,7 +189,7 @@ message BuildInfoResponse {
   string name = 1;
   string version = 2;
   string repository = 3;
-  string  license = 4;
+  string license = 4;
 }
 
 message NoParams {}
