@@ -7,7 +7,8 @@ mod filter;
 use self::camden::map_updates_request::Request as ServiceRequest;
 use self::camden::{
   AirportRequest, AirportResponse, BuildInfoResponse, MetricSet, MetricSetTextResponse, NoParams,
-  PilotRequest, PilotResponse, QueryRequest, QueryResponse,
+  PilotRequest, PilotResponse, QueryRequest, QueryResponse, QuerySubscriptionRequest,
+  QuerySubscriptionUpdate, QuerySubscriptionUpdateType,
 };
 use crate::lee::make_expr;
 use crate::lee::parser::expression::CompileFunc;
@@ -20,6 +21,7 @@ use camden::camden_server::Camden;
 use camden::{update::Object, MapUpdatesRequest, Update, UpdateType};
 use chrono::Utc;
 use log::{debug, error, info};
+use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -45,7 +47,7 @@ impl CamdenService {
 // need to show all the objects without checking current user map boundaries
 const MIN_ZOOM: f64 = 3.0;
 
-async fn proxy_requests(mut stream: Streaming<MapUpdatesRequest>, tx: Sender<MapUpdatesRequest>) {
+async fn proxy_requests<T>(mut stream: Streaming<T>, tx: Sender<T>) {
   while let Some(msg) = stream.next().await {
     if let Ok(msg) = msg {
       let res = tx.send(msg).await;
@@ -60,6 +62,104 @@ async fn proxy_requests(mut stream: Streaming<MapUpdatesRequest>, tx: Sender<Map
 #[tonic::async_trait]
 impl Camden for CamdenService {
   type MapUpdatesStream = Pin<Box<dyn Stream<Item = Result<Update, Status>> + Send + 'static>>;
+  type SubscribeQueryStream =
+    Pin<Box<dyn Stream<Item = Result<QuerySubscriptionUpdate, Status>> + Send + 'static>>;
+
+  async fn subscribe_query(
+    &self,
+    request: Request<Streaming<QuerySubscriptionRequest>>,
+  ) -> Result<Response<Self::SubscribeQueryStream>, Status> {
+    let manager = self.manager.clone();
+    let remote = request.remote_addr().unwrap();
+    let remote = format!("subscribe_query:{:?}", remote);
+    info!("[{remote}] client connected");
+    let stream = request.into_inner();
+
+    let (tx, rx) = mpsc::channel(100);
+    tokio::spawn(async move { proxy_requests(stream, tx).await });
+    let mut pilots_state = HashMap::new();
+    let mut subscriptions = HashMap::new();
+
+    let output = async_stream::try_stream! {
+      let mut rx = rx;
+      loop {
+        let mut subscriptions_changed = false;
+        let res = rx.try_recv();
+        match res {
+          Err(TryRecvError::Disconnected) => {
+            info!("received disconnected error");
+            break
+          },
+          Err(TryRecvError::Empty) => {},
+          Ok(msg) => {
+            if let Some(subscription) = msg.subscription {
+              match msg.request_type {
+                0 => {
+                  if let Entry::Vacant(e) = subscriptions.entry(subscription.id) {
+                    if !subscription.query.is_empty() {
+                      let res = make_expr::<Pilot>(&subscription.query);
+                      if let Ok(mut expr) = res {
+                        let cb: Box<CompileFunc<Pilot>> = Box::new(compile_filter);
+                        let filter = expr.compile(&cb).map(|_| expr);
+                        if let Ok(filter) = filter {
+                          e.insert(filter);
+                          subscriptions_changed = true;
+                        }
+                      }
+                    }
+                  }
+                },
+                1 => {
+                  if subscriptions.contains_key(&subscription.id) {
+                    subscriptions.remove(&subscription.id);
+                    subscriptions_changed = true;
+                  }
+                },
+                _ => unreachable!()
+              }
+            }
+          }
+        }
+
+        if !subscriptions_changed {
+          sleep(Duration::from_secs(5)).await;
+        }
+
+        let pilots = manager.get_all_pilots().await;
+        let (pilots_set, pilots_delete) = calc::calc_pilots(&pilots, &mut pilots_state);
+
+        for pilot in pilots_set.iter() {
+          for (id, filter) in subscriptions.iter() {
+            if filter.evaluate(pilot) {
+              let update = QuerySubscriptionUpdate {
+                subscription_id: id.to_owned(),
+                update_type: QuerySubscriptionUpdateType::Online as i32,
+                pilot: Some(pilot.clone().into())
+              };
+              yield update;
+            }
+          }
+        }
+
+        for pilot in pilots_delete.iter() {
+          for (id, filter) in subscriptions.iter() {
+            if filter.evaluate(pilot) {
+              let update = QuerySubscriptionUpdate {
+                subscription_id: id.to_owned(),
+                update_type: QuerySubscriptionUpdateType::Offline as i32,
+                pilot: Some(pilot.clone().into())
+              };
+              yield update;
+            }
+          }
+        }
+      }
+
+      info!("[{remote}] client disconnected");
+
+    };
+    Ok(Response::new(Box::pin(output) as Self::SubscribeQueryStream))
+  }
 
   async fn map_updates(
     &self,
@@ -67,7 +167,7 @@ impl Camden for CamdenService {
   ) -> Result<Response<Self::MapUpdatesStream>, Status> {
     let manager = self.manager.clone();
     let remote = request.remote_addr().unwrap();
-    let remote = format!("{:?}", remote);
+    let remote = format!("map_updates:{:?}", remote);
     info!("[{remote}] client connected");
     let stream = request.into_inner();
     let (tx, rx) = mpsc::channel(100);

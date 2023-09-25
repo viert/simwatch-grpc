@@ -226,6 +226,32 @@ message MetricSetTextResponse {
   string text = 1;
 }
 
+message QuerySubscription {
+  string id = 1;
+  string query = 2;
+}
+
+enum QuerySubscriptionRequestType {
+  SUBSCRIPTION_ADD = 0;
+  SUBSCRIPTION_DELETE = 1;
+}
+
+message QuerySubscriptionRequest {
+  QuerySubscriptionRequestType request_type = 1;
+  QuerySubscription subscription = 2;
+}
+
+enum QuerySubscriptionUpdateType {
+  ONLINE = 0;
+  OFFLINE = 1;
+}
+
+message QuerySubscriptionUpdate {
+  string subscription_id = 1;
+  QuerySubscriptionUpdateType update_type = 2;
+  Pilot pilot = 3;
+}
+
 service Camden {
   rpc MapUpdates(stream MapUpdatesRequest) returns (stream Update);
   rpc GetAirport(AirportRequest) returns (AirportResponse);
@@ -234,4 +260,5 @@ service Camden {
   rpc BuildInfo(NoParams) returns (BuildInfoResponse);
   rpc GetMetrics(NoParams) returns (MetricSet);
   rpc GetMetricsText(NoParams) returns (MetricSetTextResponse);
+  rpc SubscribeQuery(stream QuerySubscriptionRequest) returns (stream QuerySubscriptionUpdate);
 }
