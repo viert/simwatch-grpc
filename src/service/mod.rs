@@ -353,9 +353,7 @@ impl Camden for CamdenService {
           .map_err(|err| Status::unavailable(format!("{err}")))?;
         let mut pilot: camden::Pilot = pilot.into();
 
-        if let Some(tps) = tps {
-          pilot.track = tps.into_iter().map(|tp| tp.into()).collect();
-        }
+        pilot.track = tps.into_iter().map(|tp| tp.into()).collect();
 
         Ok(Response::new(PilotResponse { pilot: Some(pilot) }))
       }

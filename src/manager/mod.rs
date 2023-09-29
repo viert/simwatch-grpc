@@ -18,7 +18,7 @@ use crate::{
     load_vatsim_data,
     pilot::Pilot,
   },
-  persistent::{Persistent, TrackPoint},
+  track::{trackfile::TrackPoint, Store},
   types::Rect,
   util::{seconds_since, Counter},
   weather::WeatherManager,
@@ -45,7 +45,7 @@ pub struct Manager {
 
   airports2d: RwLock<RTree<PointObject>>,
   firs2d: RwLock<RTree<RectObject>>,
-  db: Option<RwLock<Persistent>>,
+  tracks: RwLock<Store>,
 
   metrics: RwLock<Metrics>,
 }
@@ -54,32 +54,16 @@ impl Manager {
   pub async fn new(cfg: Config) -> Self {
     info!("setting vatsim data manager up");
 
-    let res = Persistent::new(&cfg).await;
+    let tracks = Store::new(&cfg.track.folder);
 
-    if let Err(err) = &res {
-      error!("error creating track store: {}", err)
-    }
-
-    let persistent = res.ok().map(RwLock::new);
-
-    if let Some(persistent) = &persistent {
-      info!("creating database indices");
-      let persistent = persistent.write().await;
-
-      let res = persistent.indexes().await;
-      if let Err(err) = res {
-        error!("error creating database indices: {}", err);
-      }
-
-      info!("cleaning up tracks");
-      let t = Utc::now();
-      let res = persistent.cleanup().await;
-      if let Err(err) = res {
-        error!("error cleaning up: {}", err);
-      } else {
-        let process_time = seconds_since(t);
-        info!("boot-time db cleanup took {process_time}s");
-      }
+    info!("cleaning up tracks");
+    let t = Utc::now();
+    let res = tracks.cleanup();
+    if let Err(err) = res {
+      error!("error cleaning up: {}", err);
+    } else {
+      let process_time = seconds_since(t);
+      info!("boot-time track store cleanup took {process_time}s");
     }
 
     Self {
@@ -90,7 +74,7 @@ impl Manager {
       pilots_po: RwLock::new(HashMap::new()),
       airports2d: RwLock::new(RTree::new()),
       firs2d: RwLock::new(RTree::new()),
-      db: persistent,
+      tracks: RwLock::new(tracks),
       metrics: RwLock::new(Metrics::new()),
     }
   }
@@ -262,11 +246,10 @@ impl Manager {
               let mut pilots = self.pilots.write().await;
 
               // tracking first, to avoid additional cloning while inserting into hashmap later
-              if let Some(tracks) = &self.db {
-                let res = tracks.write().await.store_track(&pilot).await;
-                if let Err(err) = res {
-                  error!("error storing pilot track: {}", err);
-                }
+              let tracks = self.tracks.write().await;
+              let res = tracks.store_track(&pilot);
+              if let Err(err) = res {
+                error!("error storing pilot track: {}", err);
               }
 
               let country = self
@@ -417,43 +400,41 @@ impl Manager {
           // endregion:controllers_processing
         }
 
-        if let Some(tracks) = &self.db {
-          let t = Utc::now();
-          let res = tracks.read().await.counters().await;
-          let process_time = seconds_since(t);
-          match res {
-            Ok((tc, tpc)) => {
-              let mut metrics = self.metrics.write().await;
-              metrics
-                .database_objects_count
-                .set(labels!("object_type" = "track"), tc);
-              metrics
-                .database_objects_count
-                .set(labels!("object_type" = "trackpoint"), tpc);
-              metrics
-                .database_objects_count_fetch_time_sec
-                .set_single(process_time);
-            }
-            Err(err) => {
-              error!("error getting db counters: {err}");
-            }
+        let t = Utc::now();
+        let res = self.tracks.read().await.counters();
+        let process_time = seconds_since(t);
+        match res {
+          Ok((tc, tpc)) => {
+            let mut metrics = self.metrics.write().await;
+            metrics
+              .database_objects_count
+              .set(labels!("object_type" = "track"), tc);
+            metrics
+              .database_objects_count
+              .set(labels!("object_type" = "trackpoint"), tpc);
+            metrics
+              .database_objects_count_fetch_time_sec
+              .set_single(process_time);
           }
+          Err(err) => {
+            error!("error getting track store counters: {err}");
+          }
+        }
 
-          cleanup -= 1;
-          if cleanup == 0 {
-            let t = Utc::now();
-            let res = tracks.write().await.cleanup().await;
-            match res {
-              Err(err) => error!("error cleaning up db: {err}"),
-              Ok(_) => {
-                let process_time = seconds_since(t);
-                info!("db cleanup took {process_time}s");
-                cleanup = CLEANUP_EVERY_X_ITER;
-              }
+        cleanup -= 1;
+        if cleanup == 0 {
+          let t = Utc::now();
+          let res = self.tracks.write().await.cleanup();
+          match res {
+            Err(err) => error!("error cleaning up track store: {err}"),
+            Ok(_) => {
+              let process_time = seconds_since(t);
+              info!("track store cleanup took {process_time}s");
+              cleanup = CLEANUP_EVERY_X_ITER;
             }
-          } else {
-            debug!("{cleanup} iterations to db cleanup");
           }
+        } else {
+          debug!("{cleanup} iterations to track store cleanup");
         }
 
         sleep(self.cfg.api.poll_period).await;
@@ -468,12 +449,8 @@ impl Manager {
   pub async fn get_pilot_track(
     &self,
     pilot: &Pilot,
-  ) -> Result<Option<Vec<TrackPoint>>, mongodb::error::Error> {
-    if let Some(tracks) = &self.db {
-      tracks.read().await.get_track_points(pilot).await
-    } else {
-      Ok(None)
-    }
+  ) -> Result<Vec<TrackPoint>, Box<dyn std::error::Error>> {
+    Ok(self.tracks.read().await.get_track_points(pilot)?)
   }
 
   pub async fn get_metrics_clone(&self) -> Metrics {

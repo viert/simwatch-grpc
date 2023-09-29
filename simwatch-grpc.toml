@@ -20,8 +20,7 @@ geonames_countries_url = "http://download.geonames.org/export/dump/countryInfo.t
 geonames_shapes_url = "http://download.geonames.org/export/dump/shapes_simplified_low.json.zip"
 
 [track]
-uri = "mongodb://localhost:27017"
-dbname = "camden-dev"
+folder = "tracks"
 
 [cache]
 runways = "/tmp/runways.csv.cache"

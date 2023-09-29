@@ -103,15 +103,13 @@ impl Default for Fixed {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Track {
-  pub uri: String,
-  pub dbname: String,
+  pub folder: String,
 }
 
 impl Default for Track {
   fn default() -> Self {
     Self {
-      uri: "mongodb://localhost:27017".to_owned(),
-      dbname: "camden-dev".to_owned(),
+      folder: "/tmp/tracks".to_owned(),
     }
   }
 }
