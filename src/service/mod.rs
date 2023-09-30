@@ -7,8 +7,8 @@ mod filter;
 use self::camden::map_updates_request::Request as ServiceRequest;
 use self::camden::{
   AirportRequest, AirportResponse, BuildInfoResponse, MetricSet, MetricSetTextResponse, NoParams,
-  PilotRequest, PilotResponse, QueryRequest, QueryResponse, QuerySubscriptionRequest,
-  QuerySubscriptionUpdate, QuerySubscriptionUpdateType,
+  PilotListResponse, PilotRequest, PilotResponse, QueryRequest, QueryResponse,
+  QuerySubscriptionRequest, QuerySubscriptionUpdate, QuerySubscriptionUpdateType,
 };
 use crate::lee::make_expr;
 use crate::lee::parser::expression::CompileFunc;
@@ -359,6 +359,46 @@ impl Camden for CamdenService {
       }
       None => Err(Status::not_found("pilot not found")),
     }
+  }
+
+  async fn list_pilots(
+    &self,
+    request: Request<QueryRequest>,
+  ) -> Result<Response<PilotListResponse>, Status> {
+    let request = request.into_inner();
+    let mut pilots = self.manager.get_all_pilots().await;
+
+    if !request.query.is_empty() {
+      let expr = make_expr::<Pilot>(&request.query);
+      match expr {
+        Ok(mut expr) => {
+          let cb: Box<CompileFunc<Pilot>> = Box::new(compile_filter);
+          let res = expr.compile(&cb);
+          match res {
+            Ok(_) => {
+              pilots = pilots
+                .into_iter()
+                .filter(|pilot| expr.evaluate(pilot))
+                .collect()
+            }
+            Err(err) => {
+              return Err(Status::failed_precondition(format!(
+                "query compile error: {err}"
+              )));
+            }
+          }
+        }
+        Err(err) => {
+          return Err(Status::failed_precondition(format!(
+            "query parse error: {err}"
+          )));
+        }
+      }
+    }
+
+    Ok(Response::new(PilotListResponse {
+      pilots: pilots.into_iter().map(|pilot| pilot.into()).collect(),
+    }))
   }
 
   async fn get_airport(

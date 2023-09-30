@@ -176,6 +176,10 @@ message PilotResponse {
   Pilot pilot = 1;
 }
 
+message PilotListResponse {
+  repeated Pilot pilots = 1;
+}
+
 message QueryRequest {
   string query = 1;
 }
@@ -256,6 +260,7 @@ service Camden {
   rpc MapUpdates(stream MapUpdatesRequest) returns (stream Update);
   rpc GetAirport(AirportRequest) returns (AirportResponse);
   rpc GetPilot(PilotRequest) returns (PilotResponse);
+  rpc ListPilots(QueryRequest) returns (PilotListResponse);
   rpc CheckQuery(QueryRequest) returns (QueryResponse);
   rpc BuildInfo(NoParams) returns (BuildInfoResponse);
   rpc GetMetrics(NoParams) returns (MetricSet);
