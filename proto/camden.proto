@@ -125,11 +125,27 @@ message Airport {
   ControllerSet controllers = 9;
 }
 
+message PointList {
+  repeated Point points = 1;
+}
+
+message Boundaries {
+  string id = 1;
+  string region = 2;
+  string division = 3;
+  bool is_oceanic = 4;
+  Point min = 5;
+  Point max = 6;
+  Point center = 7;
+  repeated PointList points = 8;
+}
+
 message FIR {
   string icao = 1;
   string name = 2;
   string prefix = 3;
   map<string, Controller> controllers = 4;
+  Boundaries boundaries = 5;
 }
 
 enum UpdateType {

@@ -117,6 +117,7 @@ impl From<FIR> for camden::Fir {
         .into_iter()
         .map(|(k, v)| (k, v.into()))
         .collect(),
+      boundaries: Some(value.boundaries.into()),
     }
   }
 }
@@ -144,6 +145,29 @@ impl PartialEq for Boundaries {
   // simplify partial eq as boundaries don't change within a single app run
   fn eq(&self, other: &Self) -> bool {
     self.id == other.id
+  }
+}
+
+impl From<Boundaries> for camden::Boundaries {
+  fn from(value: Boundaries) -> Self {
+    let mut points = vec![];
+    for pts in value.points.iter() {
+      let pl = camden::PointList {
+        points: pts.iter().map(|pt| (*pt).into()).collect(),
+      };
+      points.push(pl);
+    }
+
+    Self {
+      id: value.id,
+      region: value.region,
+      division: value.division,
+      is_oceanic: value.is_oceanic,
+      min: Some(value.min.into()),
+      max: Some(value.max.into()),
+      center: Some(value.center.into()),
+      points,
+    }
   }
 }
 
