@@ -85,17 +85,6 @@ impl From<FlightPlan> for camden::FlightPlan {
   }
 }
 
-impl Pilot {
-  pub fn track_code(&self) -> String {
-    format!(
-      "{}:{}:{}",
-      self.cid,
-      self.callsign,
-      self.logon_time.timestamp()
-    )
-  }
-}
-
 impl From<crate::moving::exttypes::Pilot> for Pilot {
   fn from(src: crate::moving::exttypes::Pilot) -> Self {
     let qnh_i_hg = (src.qnh_i_hg * 100.0).round() as u16;

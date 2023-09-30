@@ -78,9 +78,15 @@ impl Store {
   }
 
   fn pilot_track_filename(&self, pilot: &Pilot) -> String {
-    let pilot_track_folder = Path::new(&self.folder).join(format!("{}", pilot.cid));
-    let code = pilot.track_code();
-    let pilot_track_filename = format!("{code}.bin");
+    let first = format!("{}", pilot.cid / 10000);
+    let second = format!("{}", pilot.cid);
+    let pilot_track_folder = Path::new(&self.folder).join(first).join(second);
+    let pilot_track_filename = format!(
+      "{}.{}.{}.bin",
+      pilot.cid,
+      pilot.callsign,
+      pilot.logon_time.timestamp()
+    );
     let pilot_track_filename = pilot_track_folder.join(&pilot_track_filename);
     format!("{}", pilot_track_filename.display())
   }
@@ -90,7 +96,7 @@ impl Store {
     let mut buf = PathBuf::from(&filename);
     buf.pop();
     if !Path::is_dir(&buf) {
-      std::fs::create_dir(&buf)?;
+      std::fs::create_dir_all(&buf)?;
     }
     let pilot_track = TrackFile::new(&filename)?;
     Ok(pilot_track)
