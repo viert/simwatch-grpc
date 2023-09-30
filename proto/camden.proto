@@ -133,8 +133,9 @@ message FIR {
 }
 
 enum UpdateType {
-  SET = 0;
-  DELETE = 1;
+  UT_NONE = 0;
+  SET = 1;
+  DELETE = 2;
 }
 
 message Update {
@@ -199,10 +200,11 @@ message BuildInfoResponse {
 message NoParams {}
 
 enum MetricType {
-  COUNTER = 0;
-  GAUGE = 1;
-  SUMMARY = 2;
-  HISTOGRAM = 3;
+  MT_NONE = 0;
+  COUNTER = 1;
+  GAUGE = 2;
+  SUMMARY = 3;
+  HISTOGRAM = 4;
 }
 
 message Metric {
@@ -236,8 +238,9 @@ message QuerySubscription {
 }
 
 enum QuerySubscriptionRequestType {
-  SUBSCRIPTION_ADD = 0;
-  SUBSCRIPTION_DELETE = 1;
+  SUBSCRIPTION_NONE = 0;
+  SUBSCRIPTION_ADD = 1;
+  SUBSCRIPTION_DELETE = 2;
 }
 
 message QuerySubscriptionRequest {
@@ -246,8 +249,9 @@ message QuerySubscriptionRequest {
 }
 
 enum QuerySubscriptionUpdateType {
-  ONLINE = 0;
-  OFFLINE = 1;
+  QSUT_NONE = 0;
+  ONLINE = 1;
+  OFFLINE = 2;
 }
 
 message QuerySubscriptionUpdate {

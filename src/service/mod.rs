@@ -184,10 +184,11 @@ impl Camden for CamdenService {
 
     let output = async_stream::try_stream! {
       let mut rx = rx;
+      let mut next_update = Utc::now();
 
       loop {
-        let mut settings_changed = false;
         let res = rx.try_recv();
+
         match res {
           Err(TryRecvError::Disconnected) => {
             info!("received disconnected error");
@@ -195,7 +196,7 @@ impl Camden for CamdenService {
           },
           Err(TryRecvError::Empty) => {},
           Ok(msg) => {
-            settings_changed = true;
+            next_update = Utc::now();
             if msg.request.is_some() {
               let req = msg.request.unwrap();
               match req {
@@ -230,106 +231,107 @@ impl Camden for CamdenService {
 
         match bounds.as_ref() {
           Some(b) => {
-            let rect: Rect = b.clone().into();
 
-            if !settings_changed {
-              sleep(Duration::from_secs(5)).await;
-            }
-            let no_bounds = b.zoom < MIN_ZOOM;
+            let dt = Utc::now();
+            if dt >= next_update {
+              let rect: Rect = b.clone().into();
+              let no_bounds = b.zoom < MIN_ZOOM;
 
-            let t = Utc::now();
-            let mut pilots = if no_bounds {
-              manager.get_all_pilots().await
-            } else {
-              manager.get_pilots(&rect).await
-            };
-
-            debug!("[{remote}] {} pilots loaded in {}s", pilots.len(), seconds_since(t));
-
-            if let Some(f) = filter.as_ref() {
-              pilots.retain(|pilot| f.evaluate(pilot));
-            }
-
-            let t = Utc::now();
-            let (pilots_set, pilots_delete) = calc::calc_pilots(&pilots, &mut pilots_state);
-            debug!("[{remote}] {} pilots diff calculated in {}s, set={}/del={}", pilots.len(), seconds_since(t), pilots_set.len(), pilots_delete.len());
-
-            for pilot in pilots_set.into_iter() {
-              let update = Update {
-                update_type: UpdateType::Set.into(),
-                object: Some(Object::Pilot(pilot.into())),
+              let t = Utc::now();
+              let mut pilots = if no_bounds {
+                manager.get_all_pilots().await
+              } else {
+                manager.get_pilots(&rect).await
               };
-              yield update;
-            }
 
-            for pilot in pilots_delete.into_iter() {
-              let update = Update {
-                update_type: UpdateType::Delete.into(),
-                object: Some(Object::Pilot(pilot.into())),
+              debug!("[{remote}] {} pilots loaded in {}s", pilots.len(), seconds_since(t));
+
+              if let Some(f) = filter.as_ref() {
+                pilots.retain(|pilot| f.evaluate(pilot));
+              }
+
+              let t = Utc::now();
+              let (pilots_set, pilots_delete) = calc::calc_pilots(&pilots, &mut pilots_state);
+              debug!("[{remote}] {} pilots diff calculated in {}s, set={}/del={}", pilots.len(), seconds_since(t), pilots_set.len(), pilots_delete.len());
+
+              for pilot in pilots_set.into_iter() {
+                let update = Update {
+                  update_type: UpdateType::Set.into(),
+                  object: Some(Object::Pilot(pilot.into())),
+                };
+                yield update;
+              }
+
+              for pilot in pilots_delete.into_iter() {
+                let update = Update {
+                  update_type: UpdateType::Delete.into(),
+                  object: Some(Object::Pilot(pilot.into())),
+                };
+                yield update;
+              }
+
+              let t = Utc::now();
+              let airports = if no_bounds {
+                manager.get_all_airports(show_wx).await
+              } else {
+                manager.get_airports(&rect, show_wx).await
               };
-              yield update;
-            }
 
-            let t = Utc::now();
-            let airports = if no_bounds {
-              manager.get_all_airports(show_wx).await
-            } else {
-              manager.get_airports(&rect, show_wx).await
-            };
+              debug!("[{remote}] {} airports loaded in {}s", airports.len(), seconds_since(t));
+              let t = Utc::now();
+              let (arpts_set, arpts_delete) = calc::calc_airports(&airports, &mut airports_state);
+              debug!("[{remote}] {} airports diff calculated in {}s, set={}/del={}", airports.len(), seconds_since(t), arpts_set.len(), arpts_delete.len());
 
-            debug!("[{remote}] {} airports loaded in {}s", airports.len(), seconds_since(t));
-            let t = Utc::now();
-            let (arpts_set, arpts_delete) = calc::calc_airports(&airports, &mut airports_state);
-            debug!("[{remote}] {} airports diff calculated in {}s, set={}/del={}", airports.len(), seconds_since(t), arpts_set.len(), arpts_delete.len());
+              for arpt in arpts_set.into_iter() {
+                let update = Update {
+                  update_type: UpdateType::Set.into(),
+                  object: Some(Object::Airport(arpt.into())),
+                };
+                yield update;
+              }
 
-            for arpt in arpts_set.into_iter() {
-              let update = Update {
-                update_type: UpdateType::Set.into(),
-                object: Some(Object::Airport(arpt.into())),
+              for arpt in arpts_delete.into_iter() {
+                let update = Update {
+                  update_type: UpdateType::Delete.into(),
+                  object: Some(Object::Airport(arpt.into())),
+                };
+                yield update;
+              }
+
+              let t = Utc::now();
+              let firs = if no_bounds {
+                manager.get_all_firs().await
+              } else {
+                manager.get_firs(&rect).await
               };
-              yield update;
-            }
 
-            for arpt in arpts_delete.into_iter() {
-              let update = Update {
-                update_type: UpdateType::Delete.into(),
-                object: Some(Object::Airport(arpt.into())),
-              };
-              yield update;
-            }
+              debug!("[{remote}] {} firs loaded in {}s", firs.len(), seconds_since(t));
+              let t = Utc::now();
+              let (firs_set, firs_delete) = calc::calc_firs(&firs, &mut firs_state);
+              debug!("[{remote}] {} firs diff calculated in {}s, set={}/del={}", firs.len(), seconds_since(t), firs_set.len(), firs_delete.len());
 
-            let t = Utc::now();
-            let firs = if no_bounds {
-              manager.get_all_firs().await
-            } else {
-              manager.get_firs(&rect).await
-            };
+              for fir in firs_set.into_iter() {
+                let update = Update {
+                  update_type: UpdateType::Set.into(),
+                  object: Some(Object::Fir(fir.into())),
+                };
+                yield update;
+              }
 
-            debug!("[{remote}] {} firs loaded in {}s", firs.len(), seconds_since(t));
-            let t = Utc::now();
-            let (firs_set, firs_delete) = calc::calc_firs(&firs, &mut firs_state);
-            debug!("[{remote}] {} firs diff calculated in {}s, set={}/del={}", firs.len(), seconds_since(t), firs_set.len(), firs_delete.len());
+              for fir in firs_delete.into_iter() {
+                let update = Update {
+                  update_type: UpdateType::Delete.into(),
+                  object: Some(Object::Fir(fir.into())),
+                };
+                yield update;
+              }
 
-            for fir in firs_set.into_iter() {
-              let update = Update {
-                update_type: UpdateType::Set.into(),
-                object: Some(Object::Fir(fir.into())),
-              };
-              yield update;
-            }
-
-            for fir in firs_delete.into_iter() {
-              let update = Update {
-                update_type: UpdateType::Delete.into(),
-                object: Some(Object::Fir(fir.into())),
-              };
-              yield update;
+              next_update = dt + Duration::from_secs(5);
             }
           },
-          None => {
-            sleep(Duration::from_millis(100)).await;
-          }
+          None => {}
         }
+        sleep(Duration::from_millis(100)).await;
       }
 
       info!("[{remote}] client disconnected");
