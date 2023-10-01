@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use log::debug;
 use std::{
   error::Error,
   fmt::Display,
@@ -64,6 +65,16 @@ pub struct TrackPoint {
   pub hdg: i16,
   pub gs: i32,
   pub ts: i64,
+}
+
+impl PartialEq for TrackPoint {
+  fn eq(&self, other: &Self) -> bool {
+    self.lat == other.lat
+      && self.lng == other.lng
+      && self.alt == other.alt
+      && self.hdg == other.hdg
+      && self.gs == other.gs
+  }
 }
 
 impl From<TrackPoint> for camden::TrackPoint {
@@ -185,14 +196,64 @@ impl TrackFile {
   }
 
   pub fn append(&mut self, tp: &TrackPoint) -> Result<()> {
+    let header = self.read_file_header()?;
+    let count = header.count as usize;
+    let offset = if count < 2 {
+      // if less than 2 points exist, append only
+      0
+    } else {
+      let mut last_two = self.read_multiple_at(count - 2, 2)?;
+      let last = last_two.pop().unwrap();
+      let prev = last_two.pop().unwrap();
+      if last == prev && prev == *tp {
+        // if the last two points are equal and the new one equals to them
+        // replace the last one, overwriting only timestamp
+        -(size_of::<TrackPoint>() as i64)
+      } else {
+        // otherwise, append
+        0
+      }
+    };
+
     let data = to_raw(tp);
-    self.file.seek(SeekFrom::End(0))?;
+    self.file.seek(SeekFrom::End(offset))?;
     self.file.write_all(&data)?;
     self.inc()?;
     Ok(())
   }
 
-  pub fn read_at(&mut self, pos: usize) -> Result<TrackPoint> {
+  pub fn read_multiple_at(&self, pos: usize, len: usize) -> Result<Vec<TrackPoint>> {
+    let header = self.read_file_header()?;
+    let count = header.count as usize;
+    let mut len = len;
+
+    if pos + len > count {
+      len = count - pos;
+    }
+
+    if len < 1 {
+      return Ok(Vec::new());
+    }
+
+    let mut buf = vec![];
+    let tplen = size_of::<TrackPoint>();
+    buf.resize(len * tplen, 0);
+
+    let offset = size_of::<TrackFileHeader>() + pos * tplen;
+    self.file.read_at(&mut buf, offset as u64)?;
+
+    let mut points = vec![];
+    for idx in 0..len {
+      let start = idx * tplen;
+      let end = (idx + 1) * tplen;
+      let tp = from_raw(&buf[start..end])?;
+      points.push(tp);
+    }
+
+    Ok(points)
+  }
+
+  pub fn read_at(&self, pos: usize) -> Result<TrackPoint> {
     let header = self.read_file_header()?;
     if pos as u64 >= header.count {
       Err(TrackFileError(format!("index {pos} out of bounds")))
