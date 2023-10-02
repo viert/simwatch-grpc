@@ -100,3 +100,23 @@ pub fn compile_filter(cond: Condition) -> Result<Box<EvaluateFunc<Pilot>>, Compi
   };
   Ok(evalfunc)
 }
+
+#[cfg(test)]
+pub mod tests {
+  use super::compile_filter;
+  use crate::{
+    lee::{make_expr, parser::expression::CompileFunc},
+    moving::pilot::Pilot,
+  };
+
+  #[test]
+  fn test_invalid_field() {
+    let query = "hello == \"world\"";
+    let res = make_expr::<Pilot>(query);
+    assert!(res.is_ok());
+    let mut expr = res.unwrap();
+    let cb: Box<CompileFunc<Pilot>> = Box::new(compile_filter);
+    let res = expr.compile(&cb);
+    assert!(res.is_err());
+  }
+}

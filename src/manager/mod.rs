@@ -112,19 +112,29 @@ impl Manager {
       .collect()
   }
 
-  pub async fn get_pilots(&self, rect: &Rect) -> Vec<Pilot> {
+  pub async fn get_pilots(&self, rect: &Rect, subscribed_ids: &HashSet<String>) -> Vec<Pilot> {
     let pilots2d = self.pilots2d.read().await;
     let pilots_idx = self.pilots.read().await;
     let mut pilots = vec![];
+    let mut subs = subscribed_ids.clone();
 
     for env in rect.envelopes() {
       for po in pilots2d.locate_in_envelope(&env) {
         let pilot = pilots_idx.get(&po.id);
         if let Some(pilot) = pilot {
+          subs.remove(&pilot.callsign);
           pilots.push(pilot.clone());
         }
       }
     }
+
+    for sub in subs.into_iter() {
+      let pilot = pilots_idx.get(&sub);
+      if let Some(pilot) = pilot {
+        pilots.push(pilot.clone());
+      }
+    }
+
     pilots
   }
 

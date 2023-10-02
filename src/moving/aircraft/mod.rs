@@ -4,6 +4,8 @@ use lazy_static::lazy_static;
 use serde::Serialize;
 use std::collections::HashMap;
 
+use crate::service::camden;
+
 #[derive(Debug, Serialize, PartialEq, Eq)]
 pub enum EngineType {
   Electric,
@@ -11,6 +13,18 @@ pub enum EngineType {
   Piston,
   Rocket,
   Turboprop,
+}
+
+impl From<&EngineType> for camden::EngineType {
+  fn from(value: &EngineType) -> Self {
+    match value {
+      EngineType::Electric => Self::EtElectric,
+      EngineType::Jet => Self::EtJet,
+      EngineType::Piston => Self::EtPiston,
+      EngineType::Rocket => Self::EtRocket,
+      EngineType::Turboprop => Self::EtTurboprop,
+    }
+  }
 }
 
 #[derive(Debug, Serialize, PartialEq, Eq)]
@@ -21,6 +35,19 @@ pub enum AircraftType {
   LandPlane,
   SeaPlane,
   Tiltrotor,
+}
+
+impl From<&AircraftType> for camden::AircraftType {
+  fn from(value: &AircraftType) -> Self {
+    match value {
+      AircraftType::Amphibian => Self::AtAmphibian,
+      AircraftType::Gyrocopter => Self::AtGyrocopter,
+      AircraftType::Helicopter => Self::AtHelicopter,
+      AircraftType::LandPlane => Self::AtLandplane,
+      AircraftType::SeaPlane => Self::AtSeaplane,
+      AircraftType::Tiltrotor => Self::AtTiltrotor,
+    }
+  }
 }
 
 #[derive(Debug, Serialize, PartialEq, Eq)]
@@ -34,6 +61,24 @@ pub struct Aircraft {
   pub aircraft_type: AircraftType,
   pub engine_count: u8,
   pub engine_type: EngineType,
+}
+
+impl From<&Aircraft> for camden::Aircraft {
+  fn from(value: &Aircraft) -> Self {
+    let aircraft_type: camden::AircraftType = (&value.aircraft_type).into();
+    let engine_type: camden::EngineType = (&value.engine_type).into();
+    Self {
+      name: value.name.into(),
+      description: value.description.into(),
+      wtc: value.wtc.into(),
+      wtg: value.wtg.into(),
+      designator: value.designator.into(),
+      manufacturer_code: value.manufacturer_code.into(),
+      aircraft_type: aircraft_type as i32,
+      engine_count: value.engine_count as u32,
+      engine_type: engine_type as i32,
+    }
+  }
 }
 
 lazy_static! {

@@ -41,6 +41,37 @@ message ControllerSet {
   Controller approach = 5;
 }
 
+enum AircraftType {
+  AT_NONE = 0;
+  AT_AMPHIBIAN = 1;
+  AT_GYROCOPTER = 2;
+  AT_HELICOPTER = 3;
+  AT_LANDPLANE = 4;
+  AT_SEAPLANE = 5;
+  AT_TILTROTOR = 6;
+}
+
+enum EngineType {
+  ET_NONE = 0;
+  ET_ELECTRIC = 1;
+  ET_JET = 2;
+  ET_PISTON = 3;
+  ET_ROCKET = 4;
+  ET_TURBOPROP = 5;
+}
+
+message Aircraft {
+  string name = 1;
+  string description = 2;
+  string wtc = 3;
+  string wtg = 4;
+  string designator = 5;
+  string manufacturer_code = 6;
+  AircraftType aircraft_type = 7;
+  uint32 engine_count = 8;
+  EngineType engine_type = 9;
+}
+
 message Pilot {
   uint32 cid = 1;
   string name = 2;
@@ -58,6 +89,7 @@ message Pilot {
   uint64 last_updated = 14;
   uint64 logon_time = 15;
   repeated TrackPoint track = 16;
+  repeated Aircraft aircraft_type = 17;
 }
 
 message FlightPlan {
@@ -174,6 +206,8 @@ message MapUpdatesRequest {
     MapBounds bounds = 1;
     string filter = 2;
     bool show_wx = 3;
+    string subscribe_id = 4;
+    string unsubscribe_id = 5;
   }
 }
 

@@ -22,7 +22,7 @@ use camden::{update::Object, MapUpdatesRequest, Update, UpdateType};
 use chrono::Utc;
 use log::{debug, error, info};
 use std::collections::hash_map::Entry;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
@@ -181,6 +181,7 @@ impl Camden for CamdenService {
     let mut pilots_state = HashMap::new();
     let mut airports_state = HashMap::new();
     let mut firs_state = HashMap::new();
+    let mut subscriptions = HashSet::new();
 
     let output = async_stream::try_stream! {
       let mut rx = rx;
@@ -224,6 +225,14 @@ impl Camden for CamdenService {
                   debug!("client {:?} show_wx request {}", remote, value);
                   show_wx = value;
                 }
+                ServiceRequest::SubscribeId(value) => {
+                  debug!("client {:?} subscribe request {}", remote, value);
+                  subscriptions.insert(value);
+                }
+                ServiceRequest::UnsubscribeId(value) => {
+                  debug!("client {:?} unsubscribe request {}", remote, value);
+                  subscriptions.remove(&value);
+                }
               }
             }
           }
@@ -241,13 +250,13 @@ impl Camden for CamdenService {
               let mut pilots = if no_bounds {
                 manager.get_all_pilots().await
               } else {
-                manager.get_pilots(&rect).await
+                manager.get_pilots(&rect, &subscriptions).await
               };
 
               debug!("[{remote}] {} pilots loaded in {}s", pilots.len(), seconds_since(t));
 
               if let Some(f) = filter.as_ref() {
-                pilots.retain(|pilot| f.evaluate(pilot));
+                pilots.retain(|pilot| subscriptions.contains(&pilot.callsign) || f.evaluate(pilot));
               }
 
               let t = Utc::now();
