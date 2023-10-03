@@ -96,7 +96,7 @@ lazy_static! {
   };
 }
 
-pub fn guess_aircraft_types(code: &str) -> Option<Vec<&'static Aircraft>> {
+pub fn guess_aircraft_types(code: &str) -> Option<&'static Aircraft> {
   // pff unicode is tough
   let mut indices: Vec<usize> = code.char_indices().map(|(i, _)| i).collect();
   indices.push(code.len());
@@ -106,8 +106,10 @@ pub fn guess_aircraft_types(code: &str) -> Option<Vec<&'static Aircraft>> {
     let idx = indices[l];
     let partial_code = &code[..idx];
     let atypes = DB.get(partial_code);
-    if atypes.is_some() {
-      return atypes.cloned();
+    if let Some(atypes) = atypes {
+      if !atypes.is_empty() {
+        return atypes.get(0).map(|at| *at);
+      }
     }
     l -= 1;
   }

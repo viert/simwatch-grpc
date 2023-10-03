@@ -22,7 +22,7 @@ pub struct Pilot {
   pub flight_plan: Option<FlightPlan>,
   pub logon_time: DateTime<Utc>,
   pub last_updated: DateTime<Utc>,
-  pub aircraft_type: Option<Vec<&'static Aircraft>>,
+  pub aircraft_type: Option<&'static Aircraft>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -129,11 +129,6 @@ impl From<crate::moving::exttypes::Pilot> for Pilot {
 
 impl From<Pilot> for camden::Pilot {
   fn from(value: Pilot) -> Self {
-    let aircraft_type = match value.aircraft_type {
-      Some(ats) => ats.into_iter().map(|at| at.into()).collect(),
-      None => vec![],
-    };
-
     Self {
       cid: value.cid,
       name: value.name,
@@ -151,7 +146,7 @@ impl From<Pilot> for camden::Pilot {
       last_updated: value.last_updated.timestamp_millis() as u64,
       logon_time: value.logon_time.timestamp_millis() as u64,
       track: vec![],
-      aircraft_type,
+      aircraft_type: value.aircraft_type.map(|at| at.into()),
     }
   }
 }

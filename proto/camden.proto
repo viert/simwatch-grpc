@@ -88,8 +88,8 @@ message Pilot {
   FlightPlan flight_plan = 13;
   uint64 last_updated = 14;
   uint64 logon_time = 15;
-  repeated TrackPoint track = 16;
-  repeated Aircraft aircraft_type = 17;
+  Aircraft aircraft_type = 16;
+  repeated TrackPoint track = 17;
 }
 
 message FlightPlan {
