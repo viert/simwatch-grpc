@@ -1,5 +1,4 @@
 use chrono::{DateTime, Utc};
-use log::debug;
 use std::{
   error::Error,
   fmt::Display,
