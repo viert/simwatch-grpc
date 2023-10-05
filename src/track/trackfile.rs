@@ -174,10 +174,6 @@ impl TrackFile {
 
   fn write_file_header(&mut self, header: &TrackFileHeader) -> Result<()> {
     let buf = to_raw(header);
-    debug!(
-      "writing file header {}: {:?} buf={:?}",
-      self.name, header, buf
-    );
     self.file.write_at(&buf, 0)?;
     Ok(())
   }
