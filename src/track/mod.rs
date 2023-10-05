@@ -2,7 +2,6 @@ pub mod trackfile;
 use self::trackfile::{TrackFile, TrackFileError, TrackPoint};
 use crate::moving::pilot::Pilot;
 use chrono::{Duration, Utc};
-use clap::builder::OsStr;
 use log::debug;
 use std::path::{Path, PathBuf};
 
@@ -53,7 +52,7 @@ impl Store {
   pub fn counters(&self) -> Result<(u64, u64)> {
     let mut track_count = 0;
     let mut track_point_count = 0;
-    for file in self.collect_track_files::<OsStr>(None)? {
+    for file in self.collect_track_files::<&str>(None)? {
       let count = file.count();
       if let Ok(count) = count {
         track_count += 1;
@@ -64,7 +63,7 @@ impl Store {
   }
 
   pub fn cleanup(&self) -> Result<()> {
-    for file in self.collect_track_files::<OsStr>(None)? {
+    for file in self.collect_track_files::<&str>(None)? {
       let mtime = file.mtime();
       if let Ok(mtime) = mtime {
         let min_date = Utc::now() - Duration::days(2);

@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use log::debug;
 use std::{
   error::Error,
   fmt::Display,
@@ -125,7 +126,7 @@ pub struct TrackFile {
 
 impl TrackFile {
   pub fn new(filename: &str) -> Result<Self> {
-    let res = OpenOptions::new().append(true).read(true).open(&filename);
+    let res = OpenOptions::new().write(true).read(true).open(&filename);
 
     match res {
       Ok(file) => Ok(Self {
@@ -173,6 +174,10 @@ impl TrackFile {
 
   fn write_file_header(&mut self, header: &TrackFileHeader) -> Result<()> {
     let buf = to_raw(header);
+    debug!(
+      "writing file header {}: {:?} buf={:?}",
+      self.name, header, buf
+    );
     self.file.write_at(&buf, 0)?;
     Ok(())
   }
