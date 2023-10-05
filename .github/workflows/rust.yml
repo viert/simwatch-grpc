@@ -21,8 +21,8 @@ jobs:
           sudo /bin/mkdir /protobuf/
           sudo chown $(whoami) /protobuf/
           cd /protobuf/
-          wget https://github.com/protocolbuffers/protobuf/releases/download/v24.3/protoc-24.3-linux-x86_64.zip
-          unzip protoc-24.3-linux-x86_64.zip
+          wget https://github.com/protocolbuffers/protobuf/releases/download/v23.4/protoc-23.4-linux-x86_64.zip
+          unzip protoc-23.4-linux-x86_64.zip
           sudo mv /protobuf/bin/protoc /usr/sbin/
       - uses: actions/checkout@v3
       - uses: actions/cache@v3
