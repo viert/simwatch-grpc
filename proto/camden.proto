@@ -186,12 +186,26 @@ enum UpdateType {
   DELETE = 2;
 }
 
-message Update {
+message AirportUpdate {
   UpdateType update_type = 1;
-  oneof object {
-    Airport airport = 2;
-    FIR fir = 3;
-    Pilot pilot = 4;
+  repeated Airport airports = 2;
+}
+
+message PilotUpdate {
+  UpdateType update_type = 1;
+  repeated Pilot pilots = 2;
+}
+
+message FirUpdate {
+  UpdateType update_type = 1;
+  repeated FIR firs = 2;
+}
+
+message Update {
+  oneof object_update {
+    AirportUpdate airport_update = 1;
+    PilotUpdate pilot_update = 2;
+    FirUpdate fir_update = 3;
   }
 }
 

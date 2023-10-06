@@ -4,12 +4,6 @@ pub mod camden {
 mod calc;
 mod filter;
 
-use self::camden::map_updates_request::Request as ServiceRequest;
-use self::camden::{
-  AirportRequest, AirportResponse, BuildInfoResponse, MetricSet, MetricSetTextResponse, NoParams,
-  PilotListResponse, PilotRequest, PilotResponse, QueryRequest, QueryResponse,
-  QuerySubscriptionRequest, QuerySubscriptionUpdate, QuerySubscriptionUpdateType,
-};
 use crate::lee::make_expr;
 use crate::lee::parser::expression::CompileFunc;
 use crate::manager::Manager;
@@ -17,15 +11,22 @@ use crate::moving::pilot::Pilot;
 use crate::service::filter::compile_filter;
 use crate::types::Rect;
 use crate::util::seconds_since;
-use camden::camden_server::Camden;
-use camden::{update::Object, MapUpdatesRequest, Update, UpdateType};
+use camden::{
+  camden_server::Camden, map_updates_request::Request as ServiceRequest, update::ObjectUpdate,
+  AirportRequest, AirportResponse, AirportUpdate, BuildInfoResponse, FirUpdate, MapUpdatesRequest,
+  MetricSet, MetricSetTextResponse, NoParams, PilotListResponse, PilotRequest, PilotResponse,
+  PilotUpdate, QueryRequest, QueryResponse, QuerySubscriptionRequest, QuerySubscriptionUpdate,
+  QuerySubscriptionUpdateType, Update, UpdateType,
+};
 use chrono::Utc;
 use log::{debug, error, info};
-use std::collections::hash_map::Entry;
-use std::collections::{HashMap, HashSet};
-use std::pin::Pin;
-use std::sync::Arc;
-use std::time::Duration;
+use std::{
+  collections::hash_map::Entry,
+  collections::{HashMap, HashSet},
+  pin::Pin,
+  sync::Arc,
+  time::Duration,
+};
 use tokio::sync::mpsc::error::TryRecvError;
 use tokio::sync::mpsc::{self, Sender};
 use tokio::time::sleep;
@@ -263,21 +264,28 @@ impl Camden for CamdenService {
               let (pilots_set, pilots_delete) = calc::calc_pilots(&pilots, &mut pilots_state);
               debug!("[{remote}] {} pilots diff calculated in {}s, set={}/del={}", pilots.len(), seconds_since(t), pilots_set.len(), pilots_delete.len());
 
-              for pilot in pilots_set.into_iter() {
+              let objects: Vec<camden::Pilot> = pilots_set.into_iter().map(|p| p.into()).collect();
+              if !objects.is_empty() {
                 let update = Update {
-                  update_type: UpdateType::Set.into(),
-                  object: Some(Object::Pilot(pilot.into())),
+                  object_update: Some(ObjectUpdate::PilotUpdate(PilotUpdate {
+                    update_type: UpdateType::Set as i32,
+                    pilots: objects,
+                  })),
                 };
                 yield update;
               }
 
-              for pilot in pilots_delete.into_iter() {
+              let objects: Vec<camden::Pilot> = pilots_delete.into_iter().map(|p| p.into()).collect();
+              if !objects.is_empty() {
                 let update = Update {
-                  update_type: UpdateType::Delete.into(),
-                  object: Some(Object::Pilot(pilot.into())),
+                  object_update: Some(ObjectUpdate::PilotUpdate(PilotUpdate {
+                    update_type: UpdateType::Delete as i32,
+                    pilots: objects,
+                  })),
                 };
                 yield update;
               }
+
 
               let t = Utc::now();
               let airports = if no_bounds {
@@ -291,18 +299,24 @@ impl Camden for CamdenService {
               let (arpts_set, arpts_delete) = calc::calc_airports(&airports, &mut airports_state);
               debug!("[{remote}] {} airports diff calculated in {}s, set={}/del={}", airports.len(), seconds_since(t), arpts_set.len(), arpts_delete.len());
 
-              for arpt in arpts_set.into_iter() {
+              let objects: Vec<camden::Airport> = arpts_set.into_iter().map(|a| a.into()).collect();
+              if !objects.is_empty() {
                 let update = Update {
-                  update_type: UpdateType::Set.into(),
-                  object: Some(Object::Airport(arpt.into())),
+                 object_update: Some(ObjectUpdate::AirportUpdate(AirportUpdate {
+                    update_type: UpdateType::Set as i32,
+                    airports: objects,
+                  })),
                 };
                 yield update;
               }
 
-              for arpt in arpts_delete.into_iter() {
+              let objects: Vec<camden::Airport> = arpts_delete.into_iter().map(|a| a.into()).collect();
+              if !objects.is_empty() {
                 let update = Update {
-                  update_type: UpdateType::Delete.into(),
-                  object: Some(Object::Airport(arpt.into())),
+                  object_update: Some(ObjectUpdate::AirportUpdate(AirportUpdate {
+                    update_type: UpdateType::Delete as i32,
+                    airports: objects,
+                  })),
                 };
                 yield update;
               }
@@ -319,18 +333,24 @@ impl Camden for CamdenService {
               let (firs_set, firs_delete) = calc::calc_firs(&firs, &mut firs_state);
               debug!("[{remote}] {} firs diff calculated in {}s, set={}/del={}", firs.len(), seconds_since(t), firs_set.len(), firs_delete.len());
 
-              for fir in firs_set.into_iter() {
+              let objects: Vec<camden::Fir> = firs_set.into_iter().map(|f| f.into()).collect();
+              if !objects.is_empty() {
                 let update = Update {
-                  update_type: UpdateType::Set.into(),
-                  object: Some(Object::Fir(fir.into())),
+                  object_update: Some(ObjectUpdate::FirUpdate(FirUpdate {
+                    update_type: UpdateType::Set as i32,
+                    firs: objects,
+                  })),
                 };
                 yield update;
               }
 
-              for fir in firs_delete.into_iter() {
+              let objects: Vec<camden::Fir> = firs_delete.into_iter().map(|f| f.into()).collect();
+              if !objects.is_empty() {
                 let update = Update {
-                  update_type: UpdateType::Delete.into(),
-                  object: Some(Object::Fir(fir.into())),
+                  object_update: Some(ObjectUpdate::FirUpdate(FirUpdate {
+                    update_type: UpdateType::Delete as i32,
+                    firs: objects,
+                  })),
                 };
                 yield update;
               }
