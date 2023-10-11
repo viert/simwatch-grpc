@@ -25,6 +25,18 @@ pub struct Pilot {
   pub aircraft_type: Option<&'static Aircraft>,
 }
 
+impl Pilot {
+  pub fn flightplan_changed(&self, other: &Self) -> bool {
+    if self.flight_plan.is_some() && other.flight_plan.is_some() {
+      let fp = self.flight_plan.as_ref().unwrap().clone();
+      let ofp = other.flight_plan.as_ref().unwrap().clone();
+      fp != ofp
+    } else {
+      self.flight_plan.is_some() != other.flight_plan.is_some()
+    }
+  }
+}
+
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct FlightPlan {
   pub flight_rules: String,

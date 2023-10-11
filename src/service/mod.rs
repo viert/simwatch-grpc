@@ -15,8 +15,8 @@ use camden::{
   camden_server::Camden, map_updates_request::Request as ServiceRequest, update::ObjectUpdate,
   AirportRequest, AirportResponse, AirportUpdate, BuildInfoResponse, FirUpdate, MapUpdatesRequest,
   MetricSet, MetricSetTextResponse, NoParams, PilotListResponse, PilotRequest, PilotResponse,
-  PilotUpdate, QueryRequest, QueryResponse, QuerySubscriptionRequest, QuerySubscriptionUpdate,
-  QuerySubscriptionUpdateType, Update, UpdateType,
+  PilotUpdate, QueryRequest, QueryResponse, QuerySubscriptionRequest, QuerySubscriptionRequestType,
+  QuerySubscriptionUpdate, QuerySubscriptionUpdateType, Update, UpdateType,
 };
 use chrono::Utc;
 use log::{debug, error, info};
@@ -83,8 +83,9 @@ impl Camden for CamdenService {
 
     let output = async_stream::try_stream! {
       let mut rx = rx;
+      let mut next_update = Utc::now();
+
       loop {
-        let mut subscriptions_changed = false;
         let res = rx.try_recv();
         match res {
           Err(TryRecvError::Disconnected) => {
@@ -94,8 +95,11 @@ impl Camden for CamdenService {
           Err(TryRecvError::Empty) => {},
           Ok(msg) => {
             if let Some(subscription) = msg.subscription {
+              const ADD: i32 = QuerySubscriptionRequestType::SubscriptionAdd as i32;
+              const DEL: i32 = QuerySubscriptionRequestType::SubscriptionDelete as i32;
               match msg.request_type {
-                0 => {
+                ADD => {
+                  debug!("sub add {subscription:?}");
                   if let Entry::Vacant(e) = subscriptions.entry(subscription.id) {
                     if !subscription.query.is_empty() {
                       let res = make_expr::<Pilot>(&subscription.query);
@@ -104,16 +108,17 @@ impl Camden for CamdenService {
                         let filter = expr.compile(&cb).map(|_| expr);
                         if let Ok(filter) = filter {
                           e.insert(filter);
-                          subscriptions_changed = true;
+                          next_update = Utc::now();
                         }
                       }
                     }
                   }
                 },
-                1 => {
+                DEL => {
+                  debug!("sub del {subscription:?}");
                   if subscriptions.contains_key(&subscription.id) {
                     subscriptions.remove(&subscription.id);
-                    subscriptions_changed = true;
+                    next_update = Utc::now();
                   }
                 },
                 _ => unreachable!()
@@ -122,38 +127,53 @@ impl Camden for CamdenService {
           }
         }
 
-        if !subscriptions_changed {
-          sleep(Duration::from_secs(5)).await;
-        }
+        let now = Utc::now();
+        if now >= next_update {
+          let pilots = manager.get_all_pilots().await;
+          let (pilots_add, pilots_delete, pilots_fp) = calc::calc_pilots_online(&pilots, &mut pilots_state);
 
-        let pilots = manager.get_all_pilots().await;
-        let (pilots_set, pilots_delete) = calc::calc_pilots(&pilots, &mut pilots_state);
-
-        for pilot in pilots_set.iter() {
-          for (id, filter) in subscriptions.iter() {
-            if filter.evaluate(pilot) {
-              let update = QuerySubscriptionUpdate {
-                subscription_id: id.to_owned(),
-                update_type: QuerySubscriptionUpdateType::Online as i32,
-                pilot: Some(pilot.clone().into())
-              };
-              yield update;
+          for pilot in pilots_add.iter() {
+            for (id, filter) in subscriptions.iter() {
+              if filter.evaluate(pilot) {
+                let update = QuerySubscriptionUpdate {
+                  subscription_id: id.to_owned(),
+                  update_type: QuerySubscriptionUpdateType::Online as i32,
+                  pilot: Some(pilot.clone().into())
+                };
+                yield update;
+              }
             }
           }
-        }
 
-        for pilot in pilots_delete.iter() {
-          for (id, filter) in subscriptions.iter() {
-            if filter.evaluate(pilot) {
-              let update = QuerySubscriptionUpdate {
-                subscription_id: id.to_owned(),
-                update_type: QuerySubscriptionUpdateType::Offline as i32,
-                pilot: Some(pilot.clone().into())
-              };
-              yield update;
+          for pilot in pilots_fp.iter() {
+            for (id, filter) in subscriptions.iter() {
+              if filter.evaluate(pilot) {
+                let update = QuerySubscriptionUpdate {
+                  subscription_id: id.to_owned(),
+                  update_type: QuerySubscriptionUpdateType::Flightplan as i32,
+                  pilot: Some(pilot.clone().into())
+                };
+                yield update;
+              }
             }
           }
+
+          for pilot in pilots_delete.iter() {
+            for (id, filter) in subscriptions.iter() {
+              if filter.evaluate(pilot) {
+                let update = QuerySubscriptionUpdate {
+                  subscription_id: id.to_owned(),
+                  update_type: QuerySubscriptionUpdateType::Offline as i32,
+                  pilot: Some(pilot.clone().into())
+                };
+                yield update;
+              }
+            }
+          }
+
+          next_update = Utc::now() + Duration::from_secs(5);
         }
+        sleep(Duration::from_millis(50)).await;
       }
 
       info!("[{remote}] client disconnected");
@@ -360,7 +380,7 @@ impl Camden for CamdenService {
           },
           None => {}
         }
-        sleep(Duration::from_millis(100)).await;
+        sleep(Duration::from_millis(50)).await;
       }
 
       info!("[{remote}] client disconnected");

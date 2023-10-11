@@ -4,6 +4,37 @@ use crate::{
 };
 use std::collections::{HashMap, HashSet};
 
+pub fn calc_pilots_online(
+  pilots: &[Pilot],
+  prev: &mut HashMap<String, Pilot>,
+) -> (Vec<Pilot>, Vec<Pilot>, Vec<Pilot>) {
+  let mut pilots_add = vec![];
+  let mut pilots_delete = vec![];
+  let mut pilots_fp = vec![];
+  let mut keys = HashSet::new();
+
+  for pilot in pilots.iter() {
+    keys.insert(pilot.callsign.clone());
+    let existing = prev.get(&pilot.callsign);
+    if existing.is_none() {
+      pilots_add.push(pilot.clone());
+      prev.insert(pilot.callsign.clone(), pilot.clone());
+    } else if existing.unwrap().flightplan_changed(pilot) {
+      pilots_fp.push(pilot.clone());
+      prev.insert(pilot.callsign.clone(), pilot.clone());
+    }
+  }
+
+  let prev_keys = HashSet::from_iter(prev.keys().cloned());
+  let keys_to_remove = prev_keys.difference(&keys);
+
+  for cs in keys_to_remove {
+    let pilot = prev.remove(cs).unwrap();
+    pilots_delete.push(pilot);
+  }
+  (pilots_add, pilots_delete, pilots_fp)
+}
+
 pub fn calc_pilots(
   pilots: &[Pilot],
   prev: &mut HashMap<String, Pilot>,

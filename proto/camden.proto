@@ -316,6 +316,7 @@ enum QuerySubscriptionUpdateType {
   QSUT_NONE = 0;
   ONLINE = 1;
   OFFLINE = 2;
+  FLIGHTPLAN = 3;
 }
 
 message QuerySubscriptionUpdate {
