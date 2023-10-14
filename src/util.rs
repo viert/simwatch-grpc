@@ -1,6 +1,10 @@
 use std::{collections::HashMap, hash::Hash, ops::Deref};
 
 use chrono::{DateTime, Utc};
+use log::error;
+use tokio::sync::mpsc::Sender;
+use tokio_stream::StreamExt;
+use tonic::Streaming;
 
 pub struct Counter<T: Hash + Eq> {
   inner: HashMap<T, usize>,
@@ -56,5 +60,17 @@ pub mod tests {
     assert_eq!(keys.len(), 1);
     assert_eq!(*keys[0], "abc");
     assert_eq!(counter.get("abc").unwrap(), &2);
+  }
+}
+
+pub async fn proxy_requests<T>(mut stream: Streaming<T>, tx: Sender<T>) {
+  while let Some(msg) = stream.next().await {
+    if let Ok(msg) = msg {
+      let res = tx.send(msg).await;
+      if let Err(err) = res {
+        error!("error sending request via channel: {err:?}");
+        break;
+      }
+    }
   }
 }

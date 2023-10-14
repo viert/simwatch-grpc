@@ -15,12 +15,13 @@ timeout = "1s"
 [fixed]
 data_url = "https://raw.githubusercontent.com/vatsimnetwork/vatspy-data-project/master/VATSpy.dat"
 boundaries_url = "https://raw.githubusercontent.com/vatsimnetwork/vatspy-data-project/master/Boundaries.geojson"
-runways_url = "https://ourairports.com/data/runways.csv"
+runways_url = "https://raw.githubusercontent.com/davidmegginson/ourairports-data/main/runways.csv"
 geonames_countries_url = "http://download.geonames.org/export/dump/countryInfo.txt"
 geonames_shapes_url = "http://download.geonames.org/export/dump/shapes_simplified_low.json.zip"
 
 [track]
 folder = "tracks"
+tmf_folder = "tmf"
 
 [cache]
 runways = "/tmp/runways.csv.cache"

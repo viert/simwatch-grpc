@@ -1,16 +1,17 @@
 pub mod camden {
   tonic::include_proto!("camden");
 }
+
 mod calc;
 mod filter;
 
-use crate::lee::make_expr;
 use crate::lee::parser::expression::CompileFunc;
 use crate::manager::Manager;
 use crate::moving::pilot::Pilot;
 use crate::service::filter::compile_filter;
 use crate::types::Rect;
 use crate::util::seconds_since;
+use crate::{lee::make_expr, util::proxy_requests};
 use camden::{
   camden_server::Camden, map_updates_request::Request as ServiceRequest, update::ObjectUpdate,
   AirportRequest, AirportResponse, AirportUpdate, BuildInfoResponse, FirUpdate, MapUpdatesRequest,
@@ -19,7 +20,7 @@ use camden::{
   QuerySubscriptionUpdate, QuerySubscriptionUpdateType, Update, UpdateType,
 };
 use chrono::Utc;
-use log::{debug, error, info};
+use log::{debug, info};
 use std::{
   collections::hash_map::Entry,
   collections::{HashMap, HashSet},
@@ -27,10 +28,9 @@ use std::{
   sync::Arc,
   time::Duration,
 };
-use tokio::sync::mpsc::error::TryRecvError;
-use tokio::sync::mpsc::{self, Sender};
+use tokio::sync::mpsc::{self, error::TryRecvError};
 use tokio::time::sleep;
-use tokio_stream::{Stream, StreamExt};
+use tokio_stream::Stream;
 use tonic::{Request, Response, Status, Streaming};
 
 #[derive(Debug)]
@@ -47,18 +47,6 @@ impl CamdenService {
 // if zoom is less than this, the map might be wrapped on screen, thus we
 // need to show all the objects without checking current user map boundaries
 const MIN_ZOOM: f64 = 3.0;
-
-async fn proxy_requests<T>(mut stream: Streaming<T>, tx: Sender<T>) {
-  while let Some(msg) = stream.next().await {
-    if let Ok(msg) = msg {
-      let res = tx.send(msg).await;
-      if let Err(err) = res {
-        error!("error sending request via channel: {err:?}");
-        break;
-      }
-    }
-  }
-}
 
 #[tonic::async_trait]
 impl Camden for CamdenService {

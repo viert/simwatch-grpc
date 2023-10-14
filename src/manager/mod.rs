@@ -5,6 +5,7 @@ use self::{
   metrics::Metrics,
   spatial::{PointObject, RectObject},
 };
+
 use crate::{
   config::Config,
   fixed::{
@@ -18,11 +19,12 @@ use crate::{
     load_vatsim_data,
     pilot::Pilot,
   },
-  track::{trackfile::TrackPoint, Store},
+  track::{trackpoint::TrackPoint, Store},
   types::Rect,
   util::{seconds_since, Counter},
   weather::WeatherManager,
 };
+
 use chrono::{Duration, Utc};
 use log::{debug, error, info};
 use rstar::RTree;

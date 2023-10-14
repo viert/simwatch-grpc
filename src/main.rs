@@ -5,6 +5,7 @@ use simwatch_grpc::{
   config::read_config,
   manager::Manager,
   service::{camden::camden_server::CamdenServer, CamdenService},
+  tmf::{proto::track_server::TrackServer, TrackService},
 };
 use std::sync::Arc;
 use tonic::transport::Server;
@@ -47,6 +48,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   let svc = CamdenService::new(m);
   let svc = CamdenServer::new(svc);
-  Server::builder().add_service(svc).serve(addr).await?;
+
+  let tmf = TrackService::new(&config.track.tmf_folder);
+  let tmf = TrackServer::new(tmf);
+
+  Server::builder()
+    .add_service(svc)
+    .add_service(tmf)
+    .serve(addr)
+    .await?;
   Ok(())
 }

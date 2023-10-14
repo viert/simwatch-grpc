@@ -1,11 +1,11 @@
-pub mod trackfile;
-use self::trackfile::{TrackFile, TrackFileError, TrackPoint};
+pub mod header;
+pub mod trackpoint;
+use self::{header::Header, trackpoint::TrackPoint};
 use crate::moving::pilot::Pilot;
+use crate::trackfile::{Result, TrackFile};
 use chrono::{Duration, Utc};
 use log::debug;
 use std::path::{Path, PathBuf};
-
-type Result<T> = std::result::Result<T, TrackFileError>;
 
 #[derive(Debug)]
 pub struct Store {
@@ -19,7 +19,10 @@ impl Store {
     }
   }
 
-  fn collect_track_files<T: AsRef<Path>>(&self, path: Option<T>) -> Result<Vec<TrackFile>> {
+  fn collect_track_files<T: AsRef<Path>>(
+    &self,
+    path: Option<T>,
+  ) -> Result<Vec<TrackFile<TrackPoint, Header>>> {
     let real_path = match path {
       Some(ref path) => path.as_ref(),
       None => Path::new(&self.folder),
@@ -90,7 +93,7 @@ impl Store {
     format!("{}", pilot_track_filename.display())
   }
 
-  fn get_pilot_track_file(&self, pilot: &Pilot) -> Result<TrackFile> {
+  fn get_pilot_track_file(&self, pilot: &Pilot) -> Result<TrackFile<TrackPoint, Header>> {
     let filename = self.pilot_track_filename(pilot);
     let mut buf = PathBuf::from(&filename);
     buf.pop();
