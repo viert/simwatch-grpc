@@ -104,14 +104,12 @@ impl Default for Fixed {
 #[derive(Deserialize, Debug, Clone)]
 pub struct Track {
   pub folder: String,
-  pub tmf_folder: String,
 }
 
 impl Default for Track {
   fn default() -> Self {
     Self {
       folder: "/tmp/tracks".to_owned(),
-      tmf_folder: "/tmp/tmf".to_owned(),
     }
   }
 }

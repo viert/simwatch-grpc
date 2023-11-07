@@ -5,9 +5,8 @@ use std::{
   sync::atomic::{AtomicUsize, Ordering},
 };
 
-use crate::service::camden;
-
 use self::ext_types::{Metar, WindDirection};
+use crate::service::camden;
 use chrono::{DateTime, Duration, Utc};
 use log::{debug, error, info};
 use reqwest::Client;
@@ -17,6 +16,8 @@ use tokio::{
   sync::RwLock,
   time::{sleep, Duration as TDuration},
 };
+
+const BASE_API: &str = "https://aviationweather.gov/cgi-bin/data";
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct WeatherInfo {
@@ -182,9 +183,7 @@ impl WeatherManager {
     let locations = locations.join(",");
     info!("preloading weather for {locations}");
 
-    let path = format!(
-      "https://beta.aviationweather.gov/cgi-bin/data/metar.php?ids={locations}&format=json"
-    );
+    let path = format!("{BASE_API}/metar.php?ids={locations}&format=json");
     let client = Client::new();
 
     self.inc_apireq();
@@ -233,8 +232,7 @@ impl WeatherManager {
 
     info!("collecting weather for {location} from remote api");
 
-    let path =
-      format!("https://beta.aviationweather.gov/cgi-bin/data/metar.php?ids={location}&format=json");
+    let path = format!("{BASE_API}/metar.php?ids={location}&format=json");
     let client = Client::new();
 
     self.inc_apireq();

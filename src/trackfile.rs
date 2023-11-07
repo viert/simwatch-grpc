@@ -347,7 +347,6 @@ pub mod tests {
   #[derive(Clone, Debug)]
   struct Entry {
     value: u32,
-    ts: u64,
   }
 
   impl PartialEq for Entry {
@@ -368,13 +367,13 @@ pub mod tests {
     let _ = remove_file(path);
     {
       let mut tf: TrackFile<Entry, Header> = TrackFile::new(path).unwrap();
-      let res = tf.append(&Entry { value: 1, ts: 0 });
+      let res = tf.append(&Entry { value: 1 });
       assert!(res.is_ok());
-      let res = tf.append(&Entry { value: 2, ts: 1 });
+      let res = tf.append(&Entry { value: 2 });
       assert!(res.is_ok());
-      let res = tf.append(&Entry { value: 2, ts: 2 });
+      let res = tf.append(&Entry { value: 2 });
       assert!(res.is_ok());
-      let res = tf.append(&Entry { value: 2, ts: 4 });
+      let res = tf.append(&Entry { value: 2 });
       assert!(res.is_ok());
     }
 

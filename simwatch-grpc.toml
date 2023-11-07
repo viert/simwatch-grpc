@@ -21,7 +21,6 @@ geonames_shapes_url = "http://download.geonames.org/export/dump/shapes_simplifie
 
 [track]
 folder = "tracks"
-tmf_folder = "tmf"
 
 [cache]
 runways = "/tmp/runways.csv.cache"
