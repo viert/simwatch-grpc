@@ -296,6 +296,11 @@ impl Manager {
           // setup this iteration as "previous"
           pilots_callsigns = fresh_pilots_callsigns;
 
+          let mut vatsim_objects_online = {
+            let metrics = self.metrics.read().await;
+            metrics.vatsim_objects_online.duplicate()
+          };
+
           let process_time = seconds_since(t);
           {
             let mut metrics = self.metrics.write().await;
@@ -306,7 +311,7 @@ impl Manager {
             let fixed = self.fixed.read().await;
             for (geo_id, count) in pilots_grouped.iter() {
               let country = fixed.get_geonames_country_by_id(geo_id).unwrap();
-              metrics.vatsim_objects_online.set(
+              vatsim_objects_online.set(
                 labels!(
                   "object_type" = "pilot",
                   "country_code" = &country.iso,
@@ -397,7 +402,7 @@ impl Manager {
               let tokens: Vec<&str> = key.split(':').collect();
               let country = fixed.get_geonames_country_by_id(tokens[0]).unwrap();
               let facility = tokens[1];
-              metrics.vatsim_objects_online.set(
+              vatsim_objects_online.set(
                 labels!(
                   "object_type" = "controller",
                   "controller_type" = facility,
@@ -410,6 +415,13 @@ impl Manager {
           }
           info!("{} controllers processed in {}s", ccount, process_time);
           // endregion:controllers_processing
+
+          {
+            let mut metrics = self.metrics.write().await;
+            metrics
+              .vatsim_objects_online
+              .replace_values(vatsim_objects_online);
+          }
         }
 
         let t = Utc::now();

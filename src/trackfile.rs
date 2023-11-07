@@ -65,7 +65,8 @@ pub trait TrackFileHeader: Sized + Clone + Default {
 }
 
 fn to_raw<T: Sized>(obj: &T) -> Vec<u8> {
-  let slice = slice_from_raw_parts(obj, size_of::<T>()) as *const [u8];
+  let len = size_of::<T>();
+  let slice = slice_from_raw_parts(obj, len) as *const [u8];
   let slice = unsafe { &*slice };
   slice.into()
 }
@@ -89,7 +90,7 @@ pub struct TrackFile<E: Clone + Sized + PartialEq, H: TrackFileHeader> {
 
 impl<E: Clone + Sized + PartialEq, H: TrackFileHeader> TrackFile<E, H> {
   pub fn new(filename: &str) -> Result<Self> {
-    let res = OpenOptions::new().write(true).read(true).open(&filename);
+    let res = OpenOptions::new().write(true).read(true).open(filename);
 
     let tf = match res {
       Ok(file) => Self {
@@ -104,7 +105,7 @@ impl<E: Clone + Sized + PartialEq, H: TrackFileHeader> TrackFile<E, H> {
             .create(true)
             .write(true)
             .read(true)
-            .open(&filename)?;
+            .open(filename)?;
           let header = H::default();
           let raw_header = to_raw(&header);
           file.write_all(&raw_header)?;
@@ -161,7 +162,7 @@ impl<E: Clone + Sized + PartialEq, H: TrackFileHeader> TrackFile<E, H> {
   fn read_file_header(&self) -> Result<H> {
     let mut buf = Self::make_header_buf();
     self.file.read_at(&mut buf, 0)?;
-    Ok(from_raw(&buf)?)
+    from_raw(&buf)
   }
 
   fn write_file_header(&mut self, header: &H) -> Result<()> {
@@ -195,7 +196,7 @@ impl<E: Clone + Sized + PartialEq, H: TrackFileHeader> TrackFile<E, H> {
   }
 
   pub fn destroy(self) -> Result<()> {
-    std::fs::remove_file(&self.name)?;
+    std::fs::remove_file(self.name)?;
     Ok(())
   }
 

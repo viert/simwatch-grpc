@@ -31,20 +31,18 @@ impl Store {
     let mut files = vec![];
 
     let contents = std::fs::read_dir(real_path)?;
-    for subpath in contents {
-      if let Ok(dir_entry) = subpath {
-        let ft = dir_entry.file_type();
-        if let Ok(ft) = ft {
-          if ft.is_dir() {
-            let dir_path = real_path.join(dir_entry.file_name());
-            files.extend(self.collect_track_files(Some(dir_path))?);
-          } else if ft.is_file() {
-            let filename = real_path.join(dir_entry.file_name());
-            let filename = filename.to_str().unwrap();
-            let tf = TrackFile::new(filename);
-            if let Ok(tf) = tf {
-              files.push(tf)
-            }
+    for dir_entry in contents.flatten() {
+      let ft = dir_entry.file_type();
+      if let Ok(ft) = ft {
+        if ft.is_dir() {
+          let dir_path = real_path.join(dir_entry.file_name());
+          files.extend(self.collect_track_files(Some(dir_path))?);
+        } else if ft.is_file() {
+          let filename = real_path.join(dir_entry.file_name());
+          let filename = filename.to_str().unwrap();
+          let tf = TrackFile::new(filename);
+          if let Ok(tf) = tf {
+            files.push(tf)
           }
         }
       }
@@ -89,7 +87,7 @@ impl Store {
       pilot.callsign,
       pilot.logon_time.timestamp()
     );
-    let pilot_track_filename = pilot_track_folder.join(&pilot_track_filename);
+    let pilot_track_filename = pilot_track_folder.join(pilot_track_filename);
     format!("{}", pilot_track_filename.display())
   }
 

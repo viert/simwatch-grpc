@@ -108,7 +108,7 @@ pub fn guess_aircraft_types(code: &str) -> Option<&'static Aircraft> {
     let atypes = DB.get(partial_code);
     if let Some(atypes) = atypes {
       if !atypes.is_empty() {
-        return atypes.get(0).map(|at| *at);
+        return atypes.get(0).copied();
       }
     }
     l -= 1;

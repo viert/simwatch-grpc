@@ -247,126 +247,121 @@ impl Camden for CamdenService {
           }
         };
 
-        match bounds.as_ref() {
-          Some(b) => {
+        if let Some(b) = bounds.as_ref() {
+          let dt = Utc::now();
+          if dt >= next_update {
+            let rect: Rect = b.clone().into();
+            let no_bounds = b.zoom < MIN_ZOOM;
 
-            let dt = Utc::now();
-            if dt >= next_update {
-              let rect: Rect = b.clone().into();
-              let no_bounds = b.zoom < MIN_ZOOM;
+            let t = Utc::now();
+            let mut pilots = if no_bounds {
+              manager.get_all_pilots().await
+            } else {
+              manager.get_pilots(&rect, &subscriptions).await
+            };
 
-              let t = Utc::now();
-              let mut pilots = if no_bounds {
-                manager.get_all_pilots().await
-              } else {
-                manager.get_pilots(&rect, &subscriptions).await
-              };
+            debug!("[{remote}] {} pilots loaded in {}s", pilots.len(), seconds_since(t));
 
-              debug!("[{remote}] {} pilots loaded in {}s", pilots.len(), seconds_since(t));
-
-              if let Some(f) = filter.as_ref() {
-                pilots.retain(|pilot| subscriptions.contains(&pilot.callsign) || f.evaluate(pilot));
-              }
-
-              let t = Utc::now();
-              let (pilots_set, pilots_delete) = calc::calc_pilots(&pilots, &mut pilots_state);
-              debug!("[{remote}] {} pilots diff calculated in {}s, set={}/del={}", pilots.len(), seconds_since(t), pilots_set.len(), pilots_delete.len());
-
-              let objects: Vec<camden::Pilot> = pilots_set.into_iter().map(|p| p.into()).collect();
-              if !objects.is_empty() {
-                let update = Update {
-                  object_update: Some(ObjectUpdate::PilotUpdate(PilotUpdate {
-                    update_type: UpdateType::Set as i32,
-                    pilots: objects,
-                  })),
-                };
-                yield update;
-              }
-
-              let objects: Vec<camden::Pilot> = pilots_delete.into_iter().map(|p| p.into()).collect();
-              if !objects.is_empty() {
-                let update = Update {
-                  object_update: Some(ObjectUpdate::PilotUpdate(PilotUpdate {
-                    update_type: UpdateType::Delete as i32,
-                    pilots: objects,
-                  })),
-                };
-                yield update;
-              }
-
-
-              let t = Utc::now();
-              let airports = if no_bounds {
-                manager.get_all_airports(show_wx).await
-              } else {
-                manager.get_airports(&rect, show_wx).await
-              };
-
-              debug!("[{remote}] {} airports loaded in {}s", airports.len(), seconds_since(t));
-              let t = Utc::now();
-              let (arpts_set, arpts_delete) = calc::calc_airports(&airports, &mut airports_state);
-              debug!("[{remote}] {} airports diff calculated in {}s, set={}/del={}", airports.len(), seconds_since(t), arpts_set.len(), arpts_delete.len());
-
-              let objects: Vec<camden::Airport> = arpts_set.into_iter().map(|a| a.into()).collect();
-              if !objects.is_empty() {
-                let update = Update {
-                 object_update: Some(ObjectUpdate::AirportUpdate(AirportUpdate {
-                    update_type: UpdateType::Set as i32,
-                    airports: objects,
-                  })),
-                };
-                yield update;
-              }
-
-              let objects: Vec<camden::Airport> = arpts_delete.into_iter().map(|a| a.into()).collect();
-              if !objects.is_empty() {
-                let update = Update {
-                  object_update: Some(ObjectUpdate::AirportUpdate(AirportUpdate {
-                    update_type: UpdateType::Delete as i32,
-                    airports: objects,
-                  })),
-                };
-                yield update;
-              }
-
-              let t = Utc::now();
-              let firs = if no_bounds {
-                manager.get_all_firs().await
-              } else {
-                manager.get_firs(&rect).await
-              };
-
-              debug!("[{remote}] {} firs loaded in {}s", firs.len(), seconds_since(t));
-              let t = Utc::now();
-              let (firs_set, firs_delete) = calc::calc_firs(&firs, &mut firs_state);
-              debug!("[{remote}] {} firs diff calculated in {}s, set={}/del={}", firs.len(), seconds_since(t), firs_set.len(), firs_delete.len());
-
-              let objects: Vec<camden::Fir> = firs_set.into_iter().map(|f| f.into()).collect();
-              if !objects.is_empty() {
-                let update = Update {
-                  object_update: Some(ObjectUpdate::FirUpdate(FirUpdate {
-                    update_type: UpdateType::Set as i32,
-                    firs: objects,
-                  })),
-                };
-                yield update;
-              }
-
-              let objects: Vec<camden::Fir> = firs_delete.into_iter().map(|f| f.into()).collect();
-              if !objects.is_empty() {
-                let update = Update {
-                  object_update: Some(ObjectUpdate::FirUpdate(FirUpdate {
-                    update_type: UpdateType::Delete as i32,
-                    firs: objects,
-                  })),
-                };
-                yield update;
-              }
-
-              next_update = dt + Duration::from_secs(5);
+            if let Some(f) = filter.as_ref() {
+              pilots.retain(|pilot| subscriptions.contains(&pilot.callsign) || f.evaluate(pilot));
             }
-          },
-          None => {}
+
+            let t = Utc::now();
+            let (pilots_set, pilots_delete) = calc::calc_pilots(&pilots, &mut pilots_state);
+            debug!("[{remote}] {} pilots diff calculated in {}s, set={}/del={}", pilots.len(), seconds_since(t), pilots_set.len(), pilots_delete.len());
+
+            let objects: Vec<camden::Pilot> = pilots_set.into_iter().map(|p| p.into()).collect();
+            if !objects.is_empty() {
+              let update = Update {
+                object_update: Some(ObjectUpdate::PilotUpdate(PilotUpdate {
+                  update_type: UpdateType::Set as i32,
+                  pilots: objects,
+                })),
+              };
+              yield update;
+            }
+
+            let objects: Vec<camden::Pilot> = pilots_delete.into_iter().map(|p| p.into()).collect();
+            if !objects.is_empty() {
+              let update = Update {
+                object_update: Some(ObjectUpdate::PilotUpdate(PilotUpdate {
+                  update_type: UpdateType::Delete as i32,
+                  pilots: objects,
+                })),
+              };
+              yield update;
+            }
+
+            let t = Utc::now();
+            let airports = if no_bounds {
+              manager.get_all_airports(show_wx).await
+            } else {
+              manager.get_airports(&rect, show_wx).await
+            };
+
+            debug!("[{remote}] {} airports loaded in {}s", airports.len(), seconds_since(t));
+            let t = Utc::now();
+            let (arpts_set, arpts_delete) = calc::calc_airports(&airports, &mut airports_state);
+            debug!("[{remote}] {} airports diff calculated in {}s, set={}/del={}", airports.len(), seconds_since(t), arpts_set.len(), arpts_delete.len());
+
+            let objects: Vec<camden::Airport> = arpts_set.into_iter().map(|a| a.into()).collect();
+            if !objects.is_empty() {
+              let update = Update {
+                object_update: Some(ObjectUpdate::AirportUpdate(AirportUpdate {
+                  update_type: UpdateType::Set as i32,
+                  airports: objects,
+                })),
+              };
+              yield update;
+            }
+
+            let objects: Vec<camden::Airport> = arpts_delete.into_iter().map(|a| a.into()).collect();
+            if !objects.is_empty() {
+              let update = Update {
+                object_update: Some(ObjectUpdate::AirportUpdate(AirportUpdate {
+                  update_type: UpdateType::Delete as i32,
+                  airports: objects,
+                })),
+              };
+              yield update;
+            }
+
+            let t = Utc::now();
+            let firs = if no_bounds {
+              manager.get_all_firs().await
+            } else {
+              manager.get_firs(&rect).await
+            };
+
+            debug!("[{remote}] {} firs loaded in {}s", firs.len(), seconds_since(t));
+            let t = Utc::now();
+            let (firs_set, firs_delete) = calc::calc_firs(&firs, &mut firs_state);
+            debug!("[{remote}] {} firs diff calculated in {}s, set={}/del={}", firs.len(), seconds_since(t), firs_set.len(), firs_delete.len());
+
+            let objects: Vec<camden::Fir> = firs_set.into_iter().map(|f| f.into()).collect();
+            if !objects.is_empty() {
+              let update = Update {
+                object_update: Some(ObjectUpdate::FirUpdate(FirUpdate {
+                  update_type: UpdateType::Set as i32,
+                  firs: objects,
+                })),
+              };
+              yield update;
+            }
+
+            let objects: Vec<camden::Fir> = firs_delete.into_iter().map(|f| f.into()).collect();
+            if !objects.is_empty() {
+              let update = Update {
+                object_update: Some(ObjectUpdate::FirUpdate(FirUpdate {
+                  update_type: UpdateType::Delete as i32,
+                  firs: objects,
+                })),
+              };
+              yield update;
+            }
+
+            next_update = dt + Duration::from_secs(5);
+          }
         }
         sleep(Duration::from_millis(50)).await;
       }
@@ -415,10 +410,11 @@ impl Camden for CamdenService {
           let res = expr.compile(&cb);
           match res {
             Ok(_) => {
-              pilots = pilots
-                .into_iter()
-                .filter(|pilot| expr.evaluate(pilot))
-                .collect()
+              pilots.retain(|pilot| expr.evaluate(pilot));
+              // pilots = pilots
+              //   .into_iter()
+              //   .filter(|pilot| expr.evaluate(pilot))
+              //   .collect()
             }
             Err(err) => {
               return Err(Status::failed_precondition(format!(

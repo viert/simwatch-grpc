@@ -67,6 +67,20 @@ impl<T: Display + Clone + Default> Metric<T> {
     self.values.clear();
   }
 
+  pub fn replace_values(&mut self, value: Self) {
+    self.values = value.values;
+  }
+
+  pub fn duplicate(&self) -> Self {
+    Self {
+      name: self.name.clone(),
+      help: self.help.clone(),
+      metric_type: self.metric_type.clone(),
+      single: self.single,
+      values: HashMap::new(),
+    }
+  }
+
   pub fn set(&mut self, labels: HashMap<&'static str, String>, value: T) {
     self.single = false;
     let mut labels = labels
