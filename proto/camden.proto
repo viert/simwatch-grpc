@@ -290,6 +290,8 @@ message MetricSet {
   Metric db_cleanup_time_sec = 6;
   uint64 vatsim_data_timestamp = 7;
   uint64 process_started_at = 8;
+  Metric vatsim_data_request_count = 9;
+  Metric vatsim_data_request_error_count = 10;
 }
 
 message MetricSetTextResponse {

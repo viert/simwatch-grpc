@@ -210,6 +210,8 @@ impl Manager {
     let mut controllers: HashMap<String, Controller> = HashMap::new();
     let mut data_updated_at = 0;
     let mut cleanup = CLEANUP_EVERY_X_ITER;
+    let mut request_count = 0;
+    let mut error_count = 0;
 
     // TODO: configurable weather ttl
     let wx_manager = WeatherManager::new(Duration::seconds(1800));
@@ -222,14 +224,23 @@ impl Manager {
       let t = Utc::now();
       let data = load_vatsim_data(&self.cfg).await;
       let process_time = seconds_since(t);
-      self
-        .metrics
-        .write()
-        .await
-        .vatsim_data_load_time_sec
-        .set_single(process_time);
-      info!("vatsim data loaded in {}s", process_time);
+      request_count += 1;
+
+      if data.is_none() {
+        error_count += 1;
+      }
+
+      {
+        let mut metrics = self.metrics.write().await;
+        metrics.vatsim_data_load_time_sec.set_single(process_time);
+        metrics.vatsim_data_request_count.set_single(request_count);
+        metrics
+          .vatsim_data_request_error_count
+          .set_single(error_count);
+      }
+
       if let Some(data) = data {
+        info!("vatsim data loaded in {}s", process_time);
         let ts = data.general.updated_at.timestamp();
         if ts > data_updated_at {
           data_updated_at = ts;

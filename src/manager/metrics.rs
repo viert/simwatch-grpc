@@ -194,6 +194,8 @@ pub struct Metrics {
   pub database_objects_count_fetch_time_sec: Metric<f32>,
   pub vatsim_data_timestamp: i64,
   pub vatsim_data_load_time_sec: Metric<f32>,
+  pub vatsim_data_request_count: Metric<u64>,
+  pub vatsim_data_request_error_count: Metric<u64>,
   pub processing_time_sec: Metric<f32>,
   pub db_cleanup_time_sec: Metric<f32>,
   pub process_started_at: DateTime<Utc>,
@@ -222,6 +224,16 @@ impl Metrics {
         "vatsim_data_load_time_sec",
         "Vatsim API data load time",
         MetricType::Gauge,
+      ),
+      vatsim_data_request_count: Metric::new(
+        "vatsim_data_request_count",
+        "Vatsim API request count",
+        MetricType::Counter,
+      ),
+      vatsim_data_request_error_count: Metric::new(
+        "vatsim_data_request_error_count",
+        "Vatsim API request error count",
+        MetricType::Counter,
       ),
       processing_time_sec: Metric::new(
         "processing_time_sec",
@@ -255,6 +267,8 @@ impl Metrics {
     metrics.push(metric.render());
 
     metrics.push(self.vatsim_data_load_time_sec.render());
+    metrics.push(self.vatsim_data_request_count.render());
+    metrics.push(self.vatsim_data_request_error_count.render());
     metrics.push(self.db_cleanup_time_sec.render());
 
     let mut metric = Metric::new("uptime", "Process uptime in sec", MetricType::Counter);
@@ -285,6 +299,8 @@ impl From<Metrics> for camden::MetricSet {
       db_cleanup_time_sec: Some(value.db_cleanup_time_sec.into()),
       vatsim_data_timestamp: value.vatsim_data_timestamp as u64,
       process_started_at: value.process_started_at.timestamp_millis() as u64,
+      vatsim_data_request_count: Some(value.vatsim_data_request_count.into()),
+      vatsim_data_request_error_count: Some(value.vatsim_data_request_error_count.into()),
     }
   }
 }
