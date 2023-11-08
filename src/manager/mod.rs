@@ -460,9 +460,8 @@ impl Manager {
         } else {
           debug!("{cleanup} iterations to track store cleanup");
         }
-
-        sleep(self.cfg.api.poll_period).await;
       }
+      sleep(self.cfg.api.poll_period).await;
     }
   }
 
